@@ -75,20 +75,25 @@ function constructPayload(form) {
 
 async function prepareRequest(form) {
   const { payload } = constructPayload(form);
-  const headers = {
-    'Content-Type': 'application/json',
-    // eslint-disable-next-line comma-dangle
-    'x-adobe-form-hostname': window?.location?.hostname
-  };
   const body = { data: payload };
   let url;
   let baseUrl = getSubmitBaseUrl();
+  let headers;
   if (!baseUrl) {
     // eslint-disable-next-line prefer-template
     baseUrl = 'https://forms.adobe.com/adobe/forms/af/submit/';
     url = baseUrl + btoa(`${form.dataset.action}.json`);
+    headers = {
+      'Content-Type': 'application/json',
+      'x-adobe-form-hostname': window?.location?.hostname,
+    };
   } else {
     url = form.dataset.action;
+    // Custom endpoints (e.g. a Google Apps Script Web App) can't respond to a
+    // CORS preflight, which any non-standard header or JSON content-type
+    // triggers. Keep this a browser "simple request" - text/plain content
+    // type, no extra headers - so it skips preflight entirely.
+    headers = { 'Content-Type': 'text/plain;charset=utf-8' };
   }
   return { headers, body, url };
 }

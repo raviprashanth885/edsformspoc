@@ -13,9 +13,7 @@ import {
 } from './aem.js';
 import { setSubmitBaseUrl } from '../blocks/form/constant.js';
 
-if (window.location.hostname === 'localhost') {
-  setSubmitBaseUrl('http://localhost:4000/submit');
-}
+setSubmitBaseUrl('https://script.google.com/macros/s/AKfycbz0d-XBkYpKuxQVhOepjT-_HVZpsael3Soze9ngKuNMrGviyVRwRPp1C_ssn_qRREV-/exec');
 
 /**
  * Moves all the attributes from a given elmenet to another given element.
