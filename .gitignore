@@ -25,3 +25,6 @@ create-custom-component.zip
 packages/aem-forms-block/dist/
 packages/aem-forms-block/node_modules/
 packages/aem-forms-block/*.tgz
+
+# local form submission testing
+local-submissions.csv

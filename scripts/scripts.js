@@ -11,6 +11,11 @@ import {
   loadSections,
   loadCSS,
 } from './aem.js';
+import { setSubmitBaseUrl } from '../blocks/form/constant.js';
+
+if (window.location.hostname === 'localhost') {
+  setSubmitBaseUrl('http://localhost:4000/submit');
+}
 
 /**
  * Moves all the attributes from a given elmenet to another given element.
