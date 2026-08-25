@@ -18,6 +18,7 @@
   --text-color: #131313;
   --link-color: #3b63fb;
   --link-hover-color: #1d3ecf;
+  --card-background-color: white;
 
   /* fonts */
   --body-font-family: roboto, roboto-fallback, sans-serif;
@@ -366,4 +367,42 @@ main .section.highlight {
   background-color: var(--light-color);
   margin: 0;
   padding: 40px 0;
+}
+
+/* brand banner (logo, title, description) - see docs/context/brand-templates.md */
+.brand-banner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 40px 24px;
+  text-align: center;
+}
+
+.brand-banner picture img {
+  max-width: 200px;
+  height: auto;
+}
+
+.brand-banner h1,
+.brand-banner p {
+  color: inherit;
+}
+
+.brand-banner h1 {
+  margin-top: 0.5em;
+}
+
+/*
+ * Any section containing a form gets a contrasting card automatically, no
+ * per-brand CSS needed - it uses --card-background-color, which defaults to
+ * white and can itself be overridden per brand via the bulk metadata sheet
+ * (see BRAND_STYLE_PROPERTIES in scripts.js) if a brand ever needs a
+ * different card color against its own background.
+ */
+main .section:has(.form) {
+  max-width: 600px;
+  margin: 40px auto;
+  border-radius: 8px;
+  padding: 24px;
+  background-color: var(--card-background-color);
+  color: var(--dark-color);
 }

@@ -13,6 +13,8 @@ import {
   loadSection,
   loadSections,
   loadCSS,
+  getMetadata,
+  createOptimizedPicture,
 } from './aem.js';
 import { setSubmitBaseUrl } from '../blocks/form/constant.js';
 
@@ -141,14 +143,73 @@ export function decorateMain(main) {
 }
 
 /**
+ * Prepends a brand banner (logo, title, description) to the main element,
+ * driven by page metadata. Opt-in: only renders when a `logo` metadata value
+ * is present, so pages/brands without one are unaffected. Values normally
+ * come from the site's bulk metadata sheet (cascaded per brand by URL) and
+ * can be overridden per page via that page's own Page Metadata block.
+ * @param {Element} main The main element
+ */
+function decorateBrandBanner(main) {
+  const logo = getMetadata('logo');
+  if (!logo) return;
+  const title = getMetadata('title');
+  const description = getMetadata('description');
+
+  const banner = document.createElement('div');
+  banner.className = 'brand-banner';
+  banner.append(createOptimizedPicture(logo, title));
+  if (title) {
+    const heading = document.createElement('h1');
+    heading.textContent = title;
+    banner.append(heading);
+  }
+  if (description) {
+    const paragraph = document.createElement('p');
+    paragraph.textContent = description;
+    banner.append(paragraph);
+  }
+  main.prepend(banner);
+}
+
+/**
+ * Metadata property name -> CSS custom property name, for brand values that
+ * can be set directly from the bulk metadata sheet with no CSS authoring.
+ * This is what makes onboarding a new brand a pure authoring task: adding a
+ * row to the metadata sheet is enough, no dev/CSS step required.
+ */
+const BRAND_STYLE_PROPERTIES = {
+  'background-color': '--background-color',
+  'text-color': '--text-color',
+  'link-color': '--link-color',
+  'card-background-color': '--card-background-color',
+  font: '--body-font-family',
+};
+
+/**
+ * Applies brand color/font overrides directly from page metadata, on top of
+ * whatever `decorateTemplateAndTheme()` set via the (optional) `theme` class.
+ * Fonts must already be available on the site (an existing /fonts file or an
+ * already-linked font) - this does not load fonts dynamically.
+ */
+function decorateBrandStyle() {
+  Object.entries(BRAND_STYLE_PROPERTIES).forEach(([metaName, cssProperty]) => {
+    const value = getMetadata(metaName);
+    if (value) document.documentElement.style.setProperty(cssProperty, value);
+  });
+}
+
+/**
  * Loads everything needed to get to LCP.
  * @param {Element} doc The container element
  */
 async function loadEager(doc) {
   document.documentElement.lang = 'en';
   decorateTemplateAndTheme();
+  decorateBrandStyle();
   const main = doc.querySelector('main');
   if (main) {
+    decorateBrandBanner(main);
     decorateMain(main);
     document.body.classList.add('appear');
     await loadSection(main.querySelector('.section'), waitForFirstImage);

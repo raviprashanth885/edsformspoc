@@ -69,6 +69,7 @@ blocks/form/
 | [`worker-sync-protocol.md`](docs/context/worker-sync-protocol.md) | Message types, field change phases, sync mechanism | Debugging sync issues, adding message types, field change phases |
 | [`form-block-components.md`](docs/context/form-block-components.md) | Renderers, component decorator, subscription system | Adding or modifying components, rendering pipeline |
 | [`rules-engine.md`](docs/context/rules-engine.md) | Model internals, afb-runtime, event system, custom functions | Debugging rule evaluation, model state, custom functions |
+| [`brand-templates.md`](docs/context/brand-templates.md) | Brand logo/title/description/theme/font inheritance via bulk metadata | Adding a brand, changing page-shell theming or the brand banner |
 
 ## Coding Conventions
 
