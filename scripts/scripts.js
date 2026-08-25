@@ -101,7 +101,9 @@ export function decorateMain(main) {
 function decorateBrandBanner(main) {
   const logo = getMetadata('logo');
   if (!logo) return;
-  const title = getMetadata('title');
+  // The `title` bulk-metadata property is emitted as the <title> element,
+  // not a <meta name="title"> tag, so it isn't readable via getMetadata().
+  const { title } = document;
   const description = getMetadata('description');
 
   const banner = document.createElement('div');
