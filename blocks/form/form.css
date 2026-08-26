@@ -116,6 +116,63 @@ main .form .field-description {
     font-size: var(--form-font-size-xs);
 }
 
+/* Clickable/keyboard-accessible info icon for fields with a tooltip
+   (fd.tooltip). A CSS-only ::before icon can't receive click/focus, so this
+   is a real button, positioned relative to the label so its popup bubble
+   can anchor to it. */
+main .form .field-label {
+    position: relative;
+}
+
+main .form .field-tooltip-trigger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    margin: 0 12px 0 6px;
+    padding: 0;
+    border: 1px solid var(--border-color);
+    border-radius: 50%;
+    background: none;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--form-label-color);
+    cursor: pointer;
+}
+
+main .form .field-tooltip-trigger::after {
+    content: "?";
+}
+
+main .form .field-tooltip-bubble {
+    display: none;
+    position: absolute;
+    z-index: 1;
+    top: 100%;
+    left: 0;
+    margin-top: 4px;
+    padding: 8px 12px;
+    border-radius: 4px;
+    background: var(--text-color);
+    color: var(--background-color);
+    font-size: var(--form-font-size-xs);
+    font-weight: 400;
+    white-space: normal;
+    max-width: 260px;
+    text-transform: none;
+}
+
+/* Hover/keyboard-focus shows it instantly via CSS alone; aria-expanded is
+   driven by the click-toggle handler in form.js, for touch devices and
+   users who want it pinned open. */
+main .form .field-tooltip-trigger:hover + .field-tooltip-bubble,
+main .form .field-tooltip-trigger:focus-visible + .field-tooltip-bubble,
+main .form .field-tooltip-trigger[aria-expanded="true"] + .field-tooltip-bubble {
+    display: block;
+}
+
 main .form form .field-invalid .field-description {
     color: var(--form-error-color);
     font-weight: 700;

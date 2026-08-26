@@ -27,6 +27,29 @@ export const DELAY_MS = 0;
 let captchaField;
 let afModule;
 
+// Click-to-pin popup for field tooltips (fd.tooltip -> .field-tooltip-trigger
+// button + adjacent .field-tooltip-bubble in createLabel(), util.js). Hover
+// and keyboard focus reveal the bubble via CSS alone (no JS needed); this
+// only handles pinning it open on click/tap, and closing on click elsewhere.
+// Delegated once at the document level so it works for every form on the page.
+document.addEventListener('click', (e) => {
+  const trigger = e.target.closest('.field-tooltip-trigger');
+  const wasOpen = trigger?.getAttribute('aria-expanded') === 'true';
+  document.querySelectorAll('.field-tooltip-trigger[aria-expanded="true"]').forEach((btn) => {
+    btn.setAttribute('aria-expanded', 'false');
+  });
+  if (trigger && !wasOpen) {
+    trigger.setAttribute('aria-expanded', 'true');
+  }
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+  document.querySelectorAll('.field-tooltip-trigger[aria-expanded="true"]').forEach((btn) => {
+    btn.setAttribute('aria-expanded', 'false');
+  });
+});
+
 const withFieldWrapper = (element) => (fd) => {
   const wrapper = createFieldWrapper(fd);
   wrapper.append(element(fd));
