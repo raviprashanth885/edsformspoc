@@ -134,6 +134,11 @@ const BRAND_STYLE_PROPERTIES = {
   'link-color': '--link-color',
   'card-background-color': '--card-background-color',
   font: '--body-font-family',
+  // Only needed when a brand's font has a single weight registered (e.g.
+  // a bold-only condensed webfont) - the form's default 400 label weight
+  // wouldn't match that face, so the browser falls back to the next font
+  // in the stack instead of using the real one.
+  'label-font-weight': '--form-label-font-weight',
 };
 
 /**

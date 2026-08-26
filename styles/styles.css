@@ -277,6 +277,9 @@ main .section.highlight {
 
 .brand-banner h1 {
   margin-top: 0.5em;
+  text-transform: uppercase;
+  font-weight: 800;
+  line-height: 1.1;
 }
 
 /*
