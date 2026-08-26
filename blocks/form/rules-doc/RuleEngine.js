@@ -249,6 +249,13 @@ export default class RuleEngine {
   }
 
   enable() {
+    // Run every rule once against the form's initial data (e.g. a field
+    // with a pre-filled Value) so dynamic visible/required/tooltip state is
+    // correct on first render, not just after the user changes a field -
+    // otherwise a rule depending on a pre-selected value never fires until
+    // some unrelated field's change event happens to trigger it.
+    this.applyRules(Object.keys(this.formRules));
+
     this.formTag.addEventListener('change', (e) => {
       const field = e.target;
       const valid = e.target.checkValidity();
