@@ -159,7 +159,7 @@ export default class RuleEngine {
         stack.push(...this.dependencyTree[el].deps.value);
       }
       // eslint-disable-next-line no-loop-func
-      ['visible'].forEach((prop) => {
+      ['visible', 'required', 'tooltipVisible'].forEach((prop) => {
         this.dependencyTree[el]?.deps[prop]?.forEach((field) => {
           arr[field] = index;
           index += 1;
@@ -194,6 +194,30 @@ export default class RuleEngine {
       wrapper = element.closest('.field-wrapper');
     }
     wrapper.dataset.visible = value;
+  }
+
+  // eslint-disable-next-line class-methods-use-this
+  requiredUpdate(fieldId, value) {
+    const element = this.formTag.querySelector(`#${fieldId}`);
+    if (element instanceof NodeList) return;
+    if (value) {
+      element.setAttribute('required', 'required');
+    } else {
+      element.removeAttribute('required');
+    }
+    const wrapper = isFieldset(element) ? element : element.closest('.field-wrapper');
+    wrapper.dataset.required = value;
+  }
+
+  // eslint-disable-next-line class-methods-use-this
+  tooltipVisibleUpdate(fieldId, value) {
+    const element = this.formTag.querySelector(`#${fieldId}`);
+    if (element instanceof NodeList) return;
+    const wrapper = isFieldset(element) ? element : element.closest('.field-wrapper');
+    const trigger = wrapper?.querySelector('.field-tooltip-trigger');
+    if (!trigger) return;
+    trigger.hidden = !value;
+    if (!value) trigger.setAttribute('aria-expanded', 'false');
   }
 
   setData(field) {

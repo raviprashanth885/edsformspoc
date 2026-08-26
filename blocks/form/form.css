@@ -118,27 +118,38 @@ main .form .field-description {
 
 /* Clickable/keyboard-accessible info icon for fields with a tooltip
    (fd.tooltip). A CSS-only ::before icon can't receive click/focus, so this
-   is a real button, positioned relative to the label so its popup bubble
-   can anchor to it. */
-main .form .field-label {
-    position: relative;
+   is a real button. It sits at the far right of the label row; its panel
+   (.field-tooltip-bubble) is a separate element appended at the end of the
+   field wrapper by renderField() in form.js, so it always expands below the
+   whole field rather than floating over content. */
+main .form .field-label:has(.field-tooltip-trigger) {
+    display: flex;
+    align-items: center;
 }
 
+/* margin-left: auto (rather than justify-content: space-between on the
+   label) pushes only the trigger to the far right, regardless of whether a
+   required-field asterisk (a ::after on this same label, so also a flex
+   item) is also present - space-between would otherwise spread the
+   asterisk and the trigger apart as two separate end-items. order: 1
+   ensures the trigger renders after the asterisk (order: 0, default). */
 main .form .field-tooltip-trigger {
     display: inline-flex;
+    flex-shrink: 0;
     align-items: center;
     justify-content: center;
     width: 16px;
     height: 16px;
-    margin: 0 12px 0 6px;
+    margin-left: auto;
+    order: 1;
     padding: 0;
-    border: 1px solid var(--border-color);
-    border-radius: 50%;
-    background: none;
+    border: 0;
+    border-radius: 8px;
+    background: #969696;
     font-size: 11px;
     font-weight: 700;
     line-height: 1;
-    color: var(--form-label-color);
+    color: white;
     cursor: pointer;
 }
 
@@ -146,30 +157,33 @@ main .form .field-tooltip-trigger::after {
     content: "?";
 }
 
+/* Our own display:inline-flex above has higher specificity than the
+   browser's default [hidden] {display:none}, so tooltipVisibleUpdate()
+   toggling the hidden attribute needs an explicit override here. */
+main .form .field-tooltip-trigger[hidden] {
+    display: none;
+}
+
 main .form .field-tooltip-bubble {
     display: none;
-    position: absolute;
-    z-index: 1;
-    top: 100%;
-    left: 0;
-    margin-top: 4px;
-    padding: 8px 12px;
-    border-radius: 4px;
-    background: var(--text-color);
-    color: var(--background-color);
-    font-size: var(--form-font-size-xs);
+    margin-top: 10px;
+    margin-bottom: 5px;
+    padding: 10px;
+    color: #666;
+    background-color: #e6e6e6;
+    font-size: 0.875rem;
     font-weight: 400;
-    white-space: normal;
-    max-width: 260px;
     text-transform: none;
 }
 
 /* Hover/keyboard-focus shows it instantly via CSS alone; aria-expanded is
    driven by the click-toggle handler in form.js, for touch devices and
-   users who want it pinned open. */
-main .form .field-tooltip-trigger:hover + .field-tooltip-bubble,
-main .form .field-tooltip-trigger:focus-visible + .field-tooltip-bubble,
-main .form .field-tooltip-trigger[aria-expanded="true"] + .field-tooltip-bubble {
+   users who want it pinned open. :has() is used because the trigger (inside
+   the label) and the bubble (appended after the input/description) are no
+   longer direct siblings. */
+main .form .field-wrapper:has(.field-tooltip-trigger:hover) .field-tooltip-bubble,
+main .form .field-wrapper:has(.field-tooltip-trigger:focus-visible) .field-tooltip-bubble,
+main .form .field-wrapper:has(.field-tooltip-trigger[aria-expanded="true"]) .field-tooltip-bubble {
     display: block;
 }
 
