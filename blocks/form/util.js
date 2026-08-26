@@ -67,7 +67,7 @@ export function createLabel(fd, tagName = 'label') {
     const label = document.createElement(tagName);
     label.setAttribute('for', fd.id);
     label.className = 'field-label';
-    if (fd.label.richText === true) {
+    if (fd.label.richText) {
       label.innerHTML = stripTags(fd.label.value);
     } else {
       label.textContent = fd.label.value;
@@ -76,21 +76,30 @@ export function createLabel(fd, tagName = 'label') {
       label.dataset.visible = 'false';
     }
     if (fd.tooltip) {
-      const tooltipText = stripTags(fd.tooltip, '');
       const trigger = document.createElement('button');
       trigger.type = 'button';
       trigger.className = 'field-tooltip-trigger';
       trigger.setAttribute('aria-label', 'More information');
       trigger.setAttribute('aria-expanded', 'false');
-      const bubble = document.createElement('span');
-      bubble.className = 'field-tooltip-bubble';
-      bubble.setAttribute('role', 'tooltip');
-      bubble.textContent = tooltipText;
-      label.append(trigger, bubble);
+      label.append(trigger);
     }
     return label;
   }
   return null;
+}
+
+/**
+ * Full-width panel shown below a field when its tooltip trigger (see
+ * createLabel) is hovered, focused, or clicked. Appended at the end of the
+ * field wrapper (after the input and any description) by the caller, so it
+ * always renders below the whole field rather than floating over content.
+ */
+export function createTooltipBubble(fd) {
+  const bubble = document.createElement('div');
+  bubble.className = 'field-tooltip-bubble';
+  bubble.setAttribute('role', 'tooltip');
+  bubble.textContent = stripTags(fd.tooltip, '');
+  return bubble;
 }
 
 export function getHTMLRenderType(fd) {

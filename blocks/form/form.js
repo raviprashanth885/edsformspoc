@@ -12,6 +12,7 @@ import {
   createFieldWrapper,
   createHelpText,
   createLabel,
+  createTooltipBubble,
   createRadioOrCheckboxUsingEnum,
   extractIdFromUrl,
   getHTMLRenderType,
@@ -292,6 +293,9 @@ function renderField(fd) {
   if (fd.description) {
     field.append(createHelpText(fd));
     field.dataset.description = fd.description; // In case overriden by error message
+  }
+  if (fd.tooltip) {
+    field.append(createTooltipBubble(fd));
   }
   if (fd.fieldType !== 'radio-group' && fd.fieldType !== 'checkbox-group' && fd.fieldType !== 'captcha') {
     inputDecorator(fd, field);

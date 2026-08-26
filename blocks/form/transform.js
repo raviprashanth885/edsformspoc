@@ -20,6 +20,8 @@ function extractRules(field) {
   const rulesMapping = {
     value: 'Value Expression',
     visible: 'Visible Expression',
+    required: 'Required Expression',
+    tooltipVisible: 'Tooltip Visible Expression',
   };
   const entries = Object.entries(rulesMapping)
     // eslint-disable-next-line no-unused-vars
