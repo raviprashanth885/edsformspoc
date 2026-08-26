@@ -76,7 +76,17 @@ export function createLabel(fd, tagName = 'label') {
       label.dataset.visible = 'false';
     }
     if (fd.tooltip) {
-      label.title = stripTags(fd.tooltip, '');
+      const tooltipText = stripTags(fd.tooltip, '');
+      const trigger = document.createElement('button');
+      trigger.type = 'button';
+      trigger.className = 'field-tooltip-trigger';
+      trigger.setAttribute('aria-label', 'More information');
+      trigger.setAttribute('aria-expanded', 'false');
+      const bubble = document.createElement('span');
+      bubble.className = 'field-tooltip-bubble';
+      bubble.setAttribute('role', 'tooltip');
+      bubble.textContent = tooltipText;
+      label.append(trigger, bubble);
     }
     return label;
   }
