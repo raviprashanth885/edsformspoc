@@ -683,6 +683,13 @@ main div.form-wrapper {
     :root {
         --form-field-horz-gap: 10px;
     }
+
+    /* Stack partial-width fields (col-1 through col-11) to full width -
+       side-by-side fields like First/Last Name get too cramped below this
+       breakpoint otherwise. col-12 is already full width, so it's excluded. */
+    main .form form .field-wrapper[class*="col-"]:not(.col-12) {
+        grid-column: span 12;
+    }
 }
 
 /* Expand height for multi-select dropdowns (array types) */
