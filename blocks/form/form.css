@@ -13,7 +13,7 @@
     --form-padding: 0 10px;
     --form-columns: 12;
     --form-field-horz-gap: 40px;
-    --form-field-vert-gap: 20px;
+    --form-field-vert-gap: 8px;
     --form-invalid-border-color: #ff5f3f;
     --form-input-padding: 0.75rem 0.6rem;
     --form-input-font-size: 1rem;
@@ -65,6 +65,43 @@
 
 * {
     box-sizing: border-box;
+}
+
+/* Language switcher for the edge-localization worker (tools/localize-worker/) */
+main .form .form-language-switcher {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+main .form .form-language-switcher .language-switcher-button {
+    padding: 6px 14px;
+    border: 1px solid #ccc;
+    border-radius: 20px;
+    background: white;
+    color: #333;
+    font-size: 0.875rem;
+    cursor: pointer;
+}
+
+main .form .form-language-switcher .language-switcher-button[aria-pressed="true"] {
+    border-color: var(--link-color, #333);
+    background: var(--link-color, #333);
+    color: white;
+}
+
+main .form .form-language-switcher.loading .language-switcher-button {
+    cursor: wait;
+    opacity: 0.5;
+}
+
+main .form .form-language-switcher.loading::after {
+    align-self: center;
+    margin-left: 4px;
+    color: #777;
+    font-size: 0.875rem;
+    font-style: italic;
+    content: "Translating...";
 }
 
 main .form pre {
@@ -214,11 +251,6 @@ main .form form .field-invalid .field-description {
       flex-wrap: wrap;
   }
 
-main .form select {
-    padding-top: 0;
-    padding-bottom: 0;
-  }
-
 main .form input,
 main .form textarea,
 main .form select {
@@ -231,9 +263,24 @@ main .form select {
     font-size: var(--form-input-font-size);
     max-width: unset;
     margin-top: .5rem;
-    margin-bottom: 1rem;
+    margin-bottom: .5rem;
     border-radius: 0.25rem;
 }
+
+/* Higher specificity than the shared input/textarea/select rule above, so
+   this reliably wins regardless of source order (previous attempts at this
+   fix silently lost the cascade to that rule's height:42px). Native
+   <select> text-vertical-centering is notoriously inconsistent across
+   rendering engines even with an exact line-height match - flex centering
+   plus visible headroom (46px vs the 42px other fields use) fixes it
+   without needing to reverse-engineer the browser's internal metrics. */
+main .form form select {
+    display: flex;
+    align-items: center;
+    height: 46px;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
 
 main .form input:hover, main .form select:hover {
     border-color: rgb(90 92 96);

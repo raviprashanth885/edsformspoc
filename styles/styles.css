@@ -369,9 +369,15 @@ main .section.highlight {
   padding: 40px 0;
 }
 
-/* brand banner (logo, title, description) - see docs/context/brand-templates.md */
-.brand-banner {
-  max-width: 1200px;
+/* brand banner (logo, title, description) - see docs/context/brand-templates.md
+   Selector is `.brand-banner.section`, not just `.brand-banner`: EDS's own
+   decorateSections() tags every direct child of <main> with a `.section`
+   class automatically, including this banner div - `main > .section {
+   margin: 40px 0 }` (specificity 0,1,1) would otherwise beat a plain
+   `.brand-banner` (0,1,0) and silently zero out the left/right margin,
+   which is exactly what was happening before this fix. */
+.brand-banner.section {
+  max-width: 600px;
   margin: 0 auto;
   padding: 40px 24px;
   text-align: center;

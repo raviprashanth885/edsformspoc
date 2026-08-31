@@ -1,0 +1,8 @@
+name = "edsformspoc-localize"
+main = "worker.js"
+compatibility_date = "2026-05-03"
+
+[dev]
+port = 8788
+ip = "0.0.0.0"
+local_protocol = "http"

@@ -1,0 +1,9 @@
+{
+  "name": "edsformspoc-localize-worker",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Local-only Cloudflare Worker that translates edsformspoc's doc-based (sheet) form JSON via a native Ollama model. Independent of any other project's Docker setup - see docs/context/localization-worker.md.",
+  "scripts": {
+    "dev": "npx wrangler dev"
+  }
+}
