@@ -1,0 +1,140 @@
+.team-highlight-popup {
+    display: none;
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    z-index: 1000;
+    width: min(340px, calc(100vw - 40px));
+    overflow: hidden;
+    border-radius: 14px;
+    background: white;
+    box-shadow: 0 12px 40px rgb(0 0 0 / 25%);
+    animation: team-highlight-in 0.25s ease-out;
+}
+
+.team-highlight-popup.open {
+    display: block;
+}
+
+@keyframes team-highlight-in {
+    from {
+        transform: translateY(12px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.team-highlight-banner {
+    display: block;
+    width: 100%;
+    height: 120px;
+
+    /* Team logos are square (500x500) - "cover" on a wide banner crops the
+       edges off. "contain" always shows the full icon, with the background
+       gradient filling the letterboxed space cleanly instead of white gaps. */
+    object-fit: contain;
+    padding: 10px 0;
+    background: linear-gradient(135deg, #f0f0f0, #dcdcdc);
+}
+
+.team-highlight-body {
+    padding: 18px 20px 20px;
+}
+
+.team-highlight-body h3 {
+    margin: 0 0 8px;
+    color: #111;
+    font-size: 1.15rem;
+    font-weight: 700;
+}
+
+.team-highlight-loading {
+    color: #777;
+    font-size: 0.9rem;
+    font-style: italic;
+}
+
+.team-highlight-close {
+    display: flex;
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 1;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border: 0;
+    border-radius: 50%;
+    background: rgb(0 0 0 / 45%);
+    color: white;
+    font-size: 1.05rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.team-highlight-close:hover {
+    background: rgb(0 0 0 / 65%);
+}
+
+.team-highlight-message {
+    margin: 0 0 14px;
+    color: #222;
+    font-size: 0.95rem;
+    line-height: 1.45;
+}
+
+.team-highlight-event {
+    margin: 0 0 10px;
+    padding-top: 12px;
+    border-top: 1px solid #eee;
+    color: #555;
+    font-size: 0.8rem;
+    line-height: 1.4;
+}
+
+.team-highlight-upsell {
+    margin: 0;
+    color: #222;
+    font-size: 0.9rem;
+    font-weight: 600;
+    line-height: 1.4;
+}
+
+/* Below this width, a floating bottom-right card risks sitting on top of
+   whatever field or the submit button the user is about to reach next.
+   Dock it as a full-width bottom sheet instead, capped to a fraction of the
+   viewport height with its own scroll, so it never covers more of the form
+   than necessary and always leaves the rest of the page reachable. */
+@media (width <= 599px) {
+    .team-highlight-popup {
+        right: 0;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        max-height: 45vh;
+        overflow-y: auto;
+        border-radius: 16px 16px 0 0;
+        padding-bottom: env(safe-area-inset-bottom, 0);
+        animation: team-highlight-in-mobile 0.25s ease-out;
+    }
+
+    .team-highlight-banner {
+        height: 90px;
+    }
+}
+
+@keyframes team-highlight-in-mobile {
+    from {
+        transform: translateY(100%);
+    }
+
+    to {
+        transform: translateY(0);
+    }
+}

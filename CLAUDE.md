@@ -67,6 +67,7 @@ blocks/form/
 | [`form-block-components.md`](docs/context/form-block-components.md) | Renderers, component decorator, subscription system | Adding or modifying components, rendering pipeline |
 | [`rules-engine.md`](docs/context/rules-engine.md) | Model internals, afb-runtime, event system, custom functions | Debugging rule evaluation, model state, custom functions |
 | [`brand-templates.md`](docs/context/brand-templates.md) | Brand logo/title/description/theme/font inheritance via bulk metadata | Adding a brand, changing page-shell theming or the brand banner |
+| [`localization-worker.md`](docs/context/localization-worker.md) | Local-only edge Worker that AI-translates sheet form display text | Working on `tools/localize-worker/`, the language switcher, or form JSON localization |
 
 ## Coding Conventions
 

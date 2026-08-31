@@ -17,6 +17,7 @@ import {
   extractIdFromUrl,
   getHTMLRenderType,
   getSitePageName,
+  resetIds,
   setConstraints,
   setPlaceholder,
   stripTags,
@@ -27,6 +28,17 @@ import {
 export const DELAY_MS = 0;
 let captchaField;
 let afModule;
+
+// Demo languages for the edge-localization worker (tools/localize-worker/).
+// The worker translates a sheet form's display text (labels, descriptions,
+// tooltips, option names) server-side when the form JSON is requested with
+// a matching ?lang= param; 'en' means "no translation, original content".
+const SUPPORTED_LANGUAGES = [
+  { code: 'en', label: 'English' },
+  { code: 'es', label: 'Español' },
+  { code: 'fr', label: 'Français' },
+  { code: 'hi', label: 'हिन्दी' },
+];
 
 // Click-to-pin popup for field tooltips (fd.tooltip -> .field-tooltip-trigger
 // button + adjacent .field-tooltip-bubble in createLabel(), util.js). Hover
@@ -557,6 +569,18 @@ async function setupForm(formDef, { pathname, block, editMode = false } = {}) {
   let afbForm;
 
   if (isDocumentBasedForm(formDef)) {
+    // getId() (util.js) hands out a fresh, unsuffixed id the first time it
+    // sees a given field name and appends -1, -2, ... on every later call,
+    // for the lifetime of the module. rules-doc's RuleCompiler resolves a
+    // plain (non-Excel-formula) rule's field references by that bare name,
+    // not through fieldIdMap - so it silently depends on a field's DOM id
+    // matching its name exactly. That's only true the very first time a
+    // form is built; re-rendering the same form (e.g. the language
+    // switcher below) would otherwise mint "country-1" while the compiled
+    // rules still key off "country", breaking every dependent rule with no
+    // error. Resetting before each transform keeps ids - and therefore
+    // rule resolution - stable across re-renders.
+    resetIds();
     def = new DocBasedFormToAF().transform(formDef, { block });
     def.action = formDef.action;
     loadFormCustomStyles(def);
@@ -594,12 +618,63 @@ export async function renderForm(formDef, element) {
   return { form, afbForm };
 }
 
+// Re-fetches the form's own JSON with ?lang= appended (through the local
+// localize-worker proxy, which translates display text server-side) and
+// swaps the rendered form in place. No-op UI-wise beyond the button state;
+// setupForm()/fetchForm() do all the real work, same as a normal load.
+function decorateLanguageSwitcher(initialForm, href, pathname, block, editMode) {
+  const switcher = document.createElement('div');
+  switcher.className = 'form-language-switcher';
+  let currentForm = initialForm;
+  SUPPORTED_LANGUAGES.forEach(({ code, label }) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'language-switcher-button';
+    btn.textContent = label;
+    btn.dataset.lang = code;
+    btn.setAttribute('aria-pressed', String(code === 'en'));
+    btn.addEventListener('click', async () => {
+      if (switcher.classList.contains('loading') || btn.getAttribute('aria-pressed') === 'true') return;
+      const url = new URL(href, window.location.href);
+      if (code === 'en') {
+        url.searchParams.delete('lang');
+      } else {
+        url.searchParams.set('lang', code);
+      }
+      // A first-time translation of the full form can take a while (a large
+      // local model translating ~60 strings in one batch) - disable the
+      // switcher and show a loading state so the wait doesn't read as the
+      // page being broken, and so a second click can't fire an overlapping
+      // request against the same single-threaded local LLM.
+      switcher.classList.add('loading');
+      switcher.querySelectorAll('button').forEach((b) => { b.disabled = true; });
+      try {
+        const formDef = await fetchForm(url.toString());
+        if (!formDef) return;
+        const { form: newForm } = await setupForm(formDef, { pathname, block, editMode });
+        currentForm.replaceWith(newForm);
+        currentForm = newForm;
+        switcher.querySelectorAll('button').forEach((b) => {
+          b.setAttribute('aria-pressed', String(b === btn));
+        });
+      } finally {
+        switcher.classList.remove('loading');
+        switcher.querySelectorAll('button').forEach((b) => { b.disabled = false; });
+      }
+    });
+    switcher.append(btn);
+  });
+  return switcher;
+}
+
 export default async function decorate(block) {
   let container = block.querySelector('a[href]');
   let formDef;
   let pathname;
+  let href;
   if (container) {
     ({ pathname } = new URL(container.href));
+    href = container.href;
     formDef = await fetchForm(container.href);
   } else {
     ({ container, formDef } = extractFormDefinition(block));
@@ -607,12 +682,16 @@ export default async function decorate(block) {
   let form;
   let afbForm;
   if (formDef) {
+    const editMode = block.classList.contains('edit-mode');
     ({ form, afbForm } = await setupForm(formDef, {
       pathname,
       block,
-      editMode: block.classList.contains('edit-mode'),
+      editMode,
     }));
     container.replaceWith(form);
+    if (href && isDocumentBasedForm(formDef)) {
+      form.insertAdjacentElement('beforebegin', decorateLanguageSwitcher(form, href, pathname, block, editMode));
+    }
   }
   return { form, afbForm };
 }
