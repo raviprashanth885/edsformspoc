@@ -32,9 +32,12 @@ packages/aem-forms-block/dist/
 packages/aem-forms-block/node_modules/
 packages/aem-forms-block/*.tgz
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> 7f299b3 (Initial commit)
 =======
 
 # local form submission testing
 local-submissions.csv
 >>>>>>> d855e75 (local server to submit data)
+=======
+>>>>>>> a6ca51f (Switch doc-based form submission to Google Apps Script Web App)
