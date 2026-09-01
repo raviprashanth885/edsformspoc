@@ -5,18 +5,10 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-<<<<<<< HEAD
-    - uses: actions/checkout@v6
-    - name: Use Node.js 20
-      uses: actions/setup-node@v6
-      with:
-        node-version: 24
-=======
     - uses: actions/checkout@v4
     - name: Use Node.js 20
       uses: actions/setup-node@v4
       with:
         node-version: 20
->>>>>>> 7f299b3 (Initial commit)
     - run: npm ci
     - run: npm run lint
