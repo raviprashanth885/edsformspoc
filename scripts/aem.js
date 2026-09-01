@@ -1,5 +1,9 @@
 /*
+<<<<<<< HEAD
  * Copyright 2026 Adobe. All rights reserved.
+=======
+ * Copyright 2025 Adobe. All rights reserved.
+>>>>>>> 7f299b3 (Initial commit)
  * This file is licensed to you under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License. You may obtain a copy
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
@@ -16,6 +20,7 @@ function sampleRUM(checkpoint, data) {
   const timeShift = () => (window.performance ? window.performance.now() : Date.now() - window.hlx.rum.firstReadTime);
   try {
     window.hlx = window.hlx || {};
+<<<<<<< HEAD
     if (!window.hlx.rum || !window.hlx.rum.collector) {
       sampleRUM.enhance = () => {};
       const params = new URLSearchParams(window.location.search);
@@ -34,6 +39,17 @@ function sampleRUM(checkpoint, data) {
       const id = (window.hlx.rum && window.hlx.rum.id) || crypto.randomUUID().slice(-9);
       const isSelected = (window.hlx.rum && window.hlx.rum.isSelected)
         || (weight > 0 && Math.random() * weight < 1);
+=======
+    if (!window.hlx.rum) {
+      sampleRUM.enhance = () => {};
+      const param = new URLSearchParams(window.location.search).get('rum');
+      const weight = (param === 'on' && 1)
+        || (window.SAMPLE_PAGEVIEWS_AT_RATE === 'high' && 10)
+        || (window.SAMPLE_PAGEVIEWS_AT_RATE === 'low' && 1000)
+        || 100;
+      const id = Math.random().toString(36).slice(-4);
+      const isSelected = param !== 'off' && Math.random() * weight < 1;
+>>>>>>> 7f299b3 (Initial commit)
       // eslint-disable-next-line object-curly-newline, max-len
       window.hlx.rum = {
         weight,
@@ -49,6 +65,7 @@ function sampleRUM(checkpoint, data) {
           const errData = { source: 'undefined error' };
           try {
             errData.target = error.toString();
+<<<<<<< HEAD
             if (error.stack) {
               errData.source = error.stack
                 .split('\n')
@@ -58,6 +75,15 @@ function sampleRUM(checkpoint, data) {
                 .replace(/ at /, '@')
                 .trim();
             }
+=======
+            errData.source = error.stack
+              .split('\n')
+              .filter((line) => line.match(/https?:\/\//))
+              .shift()
+              .replace(/at ([^ ]+) \((.+)\)/, '$1@$2')
+              .replace(/ at /, '@')
+              .trim();
+>>>>>>> 7f299b3 (Initial commit)
           } catch (err) {
             /* error structure was not as expected */
           }
@@ -80,6 +106,7 @@ function sampleRUM(checkpoint, data) {
           sampleRUM('error', errData);
         });
 
+<<<<<<< HEAD
         window.addEventListener('securitypolicyviolation', (e) => {
           if (e.blockedURI.includes('helix-rum-enhancer') && e.disposition === 'enforce') {
             const errData = {
@@ -96,10 +123,16 @@ function sampleRUM(checkpoint, data) {
           const uaExtra = navigator.webdriver && !navigator.userAgent.includes('+http')
             ? { ua: `${navigator.userAgent} +http://navigator.webdriver` }
             : {};
+=======
+        sampleRUM.baseURL = sampleRUM.baseURL || new URL(window.RUM_BASE || '/', new URL('https://rum.hlx.page'));
+        sampleRUM.collectBaseURL = sampleRUM.collectBaseURL || sampleRUM.baseURL;
+        sampleRUM.sendPing = (ck, time, pingData = {}) => {
+>>>>>>> 7f299b3 (Initial commit)
           // eslint-disable-next-line max-len, object-curly-newline
           const rumData = JSON.stringify({
             weight,
             id,
+<<<<<<< HEAD
             referer: window.location.origin + window.location.pathname,
             checkpoint: ck,
             t: time,
@@ -111,6 +144,18 @@ function sampleRUM(checkpoint, data) {
             : '';
           const { href: url, origin } = new URL(
             `.rum/${weight}${urlParams ? `?${urlParams}` : ''}`,
+=======
+            referer: window.location.href,
+            checkpoint: ck,
+            t: time,
+            ...pingData,
+          });
+          const urlParams = window.RUM_PARAMS
+            ? `?${new URLSearchParams(window.RUM_PARAMS).toString()}`
+            : '';
+          const { href: url, origin } = new URL(
+            `.rum/${weight}${urlParams}`,
+>>>>>>> 7f299b3 (Initial commit)
             sampleRUM.collectBaseURL,
           );
           const body = origin === window.location.origin
@@ -327,20 +372,31 @@ function createOptimizedPicture(
   eager = false,
   breakpoints = [{ media: '(min-width: 600px)', width: '2000' }, { width: '750' }],
 ) {
+<<<<<<< HEAD
   const url = !src.startsWith('http') ? new URL(src, window.location.href) : new URL(src);
   const picture = document.createElement('picture');
   const { origin, pathname } = url;
   const ext = pathname.split('.').pop();
+=======
+  const url = new URL(src, window.location.href);
+  const picture = document.createElement('picture');
+  const { pathname } = url;
+  const ext = pathname.substring(pathname.lastIndexOf('.') + 1);
+>>>>>>> 7f299b3 (Initial commit)
 
   // webp
   breakpoints.forEach((br) => {
     const source = document.createElement('source');
     if (br.media) source.setAttribute('media', br.media);
     source.setAttribute('type', 'image/webp');
+<<<<<<< HEAD
     source.setAttribute(
       'srcset',
       `${origin}${pathname}?width=${br.width}&format=webply&optimize=medium`,
     );
+=======
+    source.setAttribute('srcset', `${pathname}?width=${br.width}&format=webply&optimize=medium`);
+>>>>>>> 7f299b3 (Initial commit)
     picture.appendChild(source);
   });
 
@@ -349,20 +405,28 @@ function createOptimizedPicture(
     if (i < breakpoints.length - 1) {
       const source = document.createElement('source');
       if (br.media) source.setAttribute('media', br.media);
+<<<<<<< HEAD
       source.setAttribute(
         'srcset',
         `${origin}${pathname}?width=${br.width}&format=${ext}&optimize=medium`,
       );
+=======
+      source.setAttribute('srcset', `${pathname}?width=${br.width}&format=${ext}&optimize=medium`);
+>>>>>>> 7f299b3 (Initial commit)
       picture.appendChild(source);
     } else {
       const img = document.createElement('img');
       img.setAttribute('loading', eager ? 'eager' : 'lazy');
       img.setAttribute('alt', alt);
       picture.appendChild(img);
+<<<<<<< HEAD
       img.setAttribute(
         'src',
         `${origin}${pathname}?width=${br.width}&format=${ext}&optimize=medium`,
       );
+=======
+      img.setAttribute('src', `${pathname}?width=${br.width}&format=${ext}&optimize=medium`);
+>>>>>>> 7f299b3 (Initial commit)
     }
   });
 
@@ -402,7 +466,10 @@ function wrapTextNodes(block) {
     'H4',
     'H5',
     'H6',
+<<<<<<< HEAD
     'HR',
+=======
+>>>>>>> 7f299b3 (Initial commit)
   ];
 
   const wrap = (el) => {
@@ -438,13 +505,57 @@ function wrapTextNodes(block) {
 }
 
 /**
+<<<<<<< HEAD
+=======
+ * Decorates paragraphs containing a single link as buttons.
+ * @param {Element} element container element
+ */
+function decorateButtons(element) {
+  element.querySelectorAll('a').forEach((a) => {
+    a.title = a.title || a.textContent;
+    if (a.href !== a.textContent) {
+      const up = a.parentElement;
+      const twoup = a.parentElement.parentElement;
+      if (!a.querySelector('img')) {
+        if (up.childNodes.length === 1 && (up.tagName === 'P' || up.tagName === 'DIV')) {
+          a.className = 'button'; // default
+          up.classList.add('button-container');
+        }
+        if (
+          up.childNodes.length === 1
+          && up.tagName === 'STRONG'
+          && twoup.childNodes.length === 1
+          && twoup.tagName === 'P'
+        ) {
+          a.className = 'button primary';
+          twoup.classList.add('button-container');
+        }
+        if (
+          up.childNodes.length === 1
+          && up.tagName === 'EM'
+          && twoup.childNodes.length === 1
+          && twoup.tagName === 'P'
+        ) {
+          a.className = 'button secondary';
+          twoup.classList.add('button-container');
+        }
+      }
+    }
+  });
+}
+
+/**
+>>>>>>> 7f299b3 (Initial commit)
  * Add <img> for icon, prefixed with codeBasePath and optional prefix.
  * @param {Element} [span] span element with icon classes
  * @param {string} [prefix] prefix to be added to icon src
  * @param {string} [alt] alt text to be added to icon
  */
 function decorateIcon(span, prefix = '', alt = '') {
+<<<<<<< HEAD
   if (span.hasChildNodes()) return; // already decorated
+=======
+>>>>>>> 7f299b3 (Initial commit)
   const iconName = Array.from(span.classList)
     .find((c) => c.startsWith('icon-'))
     .substring(5);
@@ -565,7 +676,11 @@ async function loadBlock(block) {
             }
           } catch (error) {
             // eslint-disable-next-line no-console
+<<<<<<< HEAD
             console.error(`failed to load module for ${blockName}`, error);
+=======
+            console.log(`failed to load module for ${blockName}`, error);
+>>>>>>> 7f299b3 (Initial commit)
           }
           resolve();
         })();
@@ -573,7 +688,11 @@ async function loadBlock(block) {
       await Promise.all([cssLoaded, decorationComplete]);
     } catch (error) {
       // eslint-disable-next-line no-console
+<<<<<<< HEAD
       console.error(`failed to load block ${blockName}`, error);
+=======
+      console.log(`failed to load block ${blockName}`, error);
+>>>>>>> 7f299b3 (Initial commit)
     }
     block.dataset.blockStatus = 'loaded';
   }
@@ -595,6 +714,11 @@ function decorateBlock(block) {
     blockWrapper.classList.add(`${shortBlockName}-wrapper`);
     const section = block.closest('.section');
     if (section) section.classList.add(`${shortBlockName}-container`);
+<<<<<<< HEAD
+=======
+    // eslint-disable-next-line no-use-before-define
+    decorateButtons(block);
+>>>>>>> 7f299b3 (Initial commit)
   }
 }
 
@@ -690,6 +814,10 @@ export {
   createOptimizedPicture,
   decorateBlock,
   decorateBlocks,
+<<<<<<< HEAD
+=======
+  decorateButtons,
+>>>>>>> 7f299b3 (Initial commit)
   decorateIcons,
   decorateSections,
   decorateTemplateAndTheme,

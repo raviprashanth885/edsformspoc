@@ -17,11 +17,19 @@ jobs:
     if: ${{ github.event_name == 'workflow_dispatch' || ( github.ref == 'refs/heads/main' && !(contains(github.event, 'head_commit') || github.event.head_commit.message == 'Initial commit' )) }}
     steps:
       - name: Checkout
+<<<<<<< HEAD
         uses: actions/checkout@v6
       - name: Use Node.js 20
         uses: actions/setup-node@v6
         with:
           node-version: 24
+=======
+        uses: actions/checkout@v4
+      - name: Use Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+>>>>>>> 7f299b3 (Initial commit)
       - name: Remove Helper Files
         run: | 
           rm -rf \
@@ -29,21 +37,57 @@ jobs:
             .renovaterc.json \
             CHANGELOG.md
 
+<<<<<<< HEAD
+=======
+      - name: Remove Form Development Files
+        run: |
+          rm -rf \
+            .circleci .npmrc test rollup playwright.config.js
+
+      - name: Update .eslintignore
+        run: |
+          sed -i '/^rollup/d' .eslintignore
+          sed -i '/^helix-importer-ui/d' .eslintignore
+
+      - name: Update Package.json
+        run: |
+          rm -rf package.json package-lock.json  
+
+>>>>>>> 7f299b3 (Initial commit)
       - name: Initialize README
         # replace {repo} and {owner} with the actual values
         run: |
           sed -i.bak "s/{repo}/$(basename ${{ github.repository }})/g" README.md
           sed -i.bak "s/{owner}/$(dirname ${{ github.repository }})/g" README.md
+<<<<<<< HEAD
       - name: Initialize AGENTS.md
         run: |
           sed -i.bak "s/{repo}/$(basename ${{ github.repository }})/g" AGENTS.md
           sed -i.bak "s/{owner}/$(dirname ${{ github.repository }})/g" AGENTS.md
+=======
+
+      - name: Create fstab.yaml for hlx4 projects
+        run: |
+          cat > fstab.yaml << 'EOL'
+          mountpoints:
+            /:
+              url: https://author-p133911-e1313554.adobeaemcloud.com/bin/franklin.delivery/{owner}/{repo}/main
+              type: "markup"
+              suffix: ".html"
+          EOL
+          sed -i.bak "s/{repo}/$(basename ${{ github.repository }})/g" fstab.yaml
+          sed -i.bak "s/{owner}/$(dirname ${{ github.repository }})/g" fstab.yaml
+
+>>>>>>> 7f299b3 (Initial commit)
       - name: Initialize Pull Request Template
         run: |
           sed -i.bak "s/{repo}/$(basename ${{ github.repository }})/g" .github/pull_request_template.md
           sed -i.bak "s/{owner}/$(dirname ${{ github.repository }})/g" .github/pull_request_template.md
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> 7f299b3 (Initial commit)
         # commit back to the repository
       - name: Commit changes
         run: |

@@ -35,6 +35,21 @@
           "...": "../blocks/*/_*.json#/definitions"
         }
       ]
+<<<<<<< HEAD
     }
   ]
 }
+=======
+    },
+    {
+      "title": "Custom Form Components",
+      "id": "custom-components",
+      "components": [
+        {
+          "...": "../blocks/form/components/range/_range.json#/definitions"
+        }
+      ]
+    }
+  ]
+}
+>>>>>>> 7f299b3 (Initial commit)

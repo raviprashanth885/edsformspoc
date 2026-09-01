@@ -2,6 +2,7 @@
 <html>
 
 <head>
+<<<<<<< HEAD
   <meta
     http-equiv="Content-Security-Policy"
     content="script-src 'nonce-aem' 'strict-dynamic' 'unsafe-inline' http: https:; base-uri 'self'; object-src 'none';"
@@ -9,13 +10,22 @@
   >
   <title>Page not found</title>
   <script nonce="aem" type="text/javascript">
+=======
+  <title>Page not found</title>
+  <script type="text/javascript">
+>>>>>>> 7f299b3 (Initial commit)
     window.isErrorPage = true;
     window.errorCode = '404';
   </script>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta property="og:title" content="Page not found">
+<<<<<<< HEAD
   <script nonce="aem" src="/scripts/scripts.js" type="module"></script>
   <script nonce="aem" type="module">
+=======
+  <script src="/scripts/scripts.js" type="module"></script>
+  <script type="module">
+>>>>>>> 7f299b3 (Initial commit)
     window.addEventListener('load', () => {
       if (document.referrer) {
         const { origin, pathname } = new URL(document.referrer);
@@ -31,7 +41,11 @@
       }
     });
   </script>
+<<<<<<< HEAD
   <script nonce="aem" type="module">
+=======
+  <script type="module">
+>>>>>>> 7f299b3 (Initial commit)
     import { sampleRUM } from '/scripts/aem.js';
     sampleRUM('404', { source: document.referrer });
   </script>

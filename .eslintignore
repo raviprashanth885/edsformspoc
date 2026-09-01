@@ -1,3 +1,16 @@
 helix-importer-ui
+<<<<<<< HEAD
 dompurify.min.js
 *.min.js
+=======
+rollup/*
+blocks/form/rules/formula/*
+blocks/form/rules/model/*
+blocks/form/rules/functions.js
+scripts/editor-support.js
+scripts/editor-support-rte.js
+tools/forms-scaffolder.js
+tools/update-mappings.js
+/test
+dompurify.min.js
+>>>>>>> 7f299b3 (Initial commit)

@@ -1,5 +1,6 @@
 {
   "extends": ["config:recommended"],
+<<<<<<< HEAD
   "packageRules": [
     {
       "matchDepTypes": ["devDependencies"],
@@ -14,3 +15,11 @@
     }
   ]
 }
+=======
+  "packageRules": [{
+      "matchDepTypes": ["devDependencies"],
+      "labels": ["ignore-psi-check"], 
+      "automerge": true
+  }]
+}
+>>>>>>> 7f299b3 (Initial commit)
