@@ -531,6 +531,7 @@ async function setupForm(formDef, { pathname, block, editMode = false } = {}) {
 
   if (isDocumentBasedForm(formDef)) {
     def = new DocBasedFormToAF().transform(formDef, { block });
+    def.action = formDef.action;
     loadFormCustomStyles(def);
     form = (await createForm(def, null, 'sheet'))?.form;
     const docRuleEngine = await import('./rules-doc/index.js');
