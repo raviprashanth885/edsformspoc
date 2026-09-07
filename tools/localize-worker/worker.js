@@ -51,12 +51,16 @@ const ALWAYS_TRANSLATE_COLUMNS = [
   'Pattern Error Message',
   'Min Error Message',
   'Max Error Message',
+  'Thank You Message',
 ];
 
 // 'Value' is display copy only for these field types (plain-text blocks,
 // button labels). For every other type it's actual data (e.g. a pre-filled
-// default) and must never be translated.
-const VALUE_IS_DISPLAY_TEXT_FOR_TYPES = new Set(['plain-text', 'plaintext', 'submit', 'button', 'reset']);
+// default) and must never be translated. The submit row's post-submit
+// behavior now lives in the explicit 'Redirect URL' / 'Thank You Message'
+// columns above instead of 'Value', so 'submit' no longer belongs here -
+// translating it would burn a translation call on an unused field.
+const VALUE_IS_DISPLAY_TEXT_FOR_TYPES = new Set(['plain-text', 'plaintext', 'button', 'reset']);
 
 // A comma-separated OptionNames list longer than this is skipped (left in
 // English) rather than translated - e.g. the Chiefs form's 248-country list
@@ -65,8 +69,15 @@ const VALUE_IS_DISPLAY_TEXT_FOR_TYPES = new Set(['plain-text', 'plaintext', 'sub
 // still translate normally.
 const MAX_OPTION_ITEMS_TO_TRANSLATE = 60;
 
-// In-memory cache: `${pathname}::${lang}` -> translated JSON string.
-// Cleared on worker restart; fine for local dev/demo use.
+// In-memory cache: `${pathname}::${lang}` -> { sourceJson, json }. sourceJson
+// is the untranslated sheet body exactly as fetched from the origin - kept
+// alongside the translated result so a later request can detect a real
+// content edit (someone changed the sheet) and re-translate, while every
+// other request for the same pathname+lang is served instantly with no
+// Ollama call, for as long as this worker process stays up. There is no
+// time-based expiry - a demo/content edit is the only thing that should ever
+// invalidate a translation, not a clock. Cleared on worker restart; fine for
+// local dev/demo use.
 const translationCache = new Map();
 
 // Fixed technical mapping from this repo's sheet enum values (Options
@@ -113,9 +124,18 @@ const NFL_TEAMS = {
 // or Adobe Experience Platform Real-Time CDP profile lookup, not a hardcoded
 // map. The description text is prompt context for the AI, not shown to users.
 const CUSTOMER_SEGMENTS = {
-  lapsed: 'a fan who signed up before but has not engaged in a while - aim for a warm, low-pressure re-engagement, not a hard sell',
-  new_visitor: 'someone who has never signed up before - aim for a welcoming, exciting first impression',
-  vip: 'a loyal, highly engaged fan who already receives frequent updates - aim to make them feel recognized and valued',
+  lapsed: {
+    description: 'a fan who signed up before but has not engaged in a while - aim for a warm, low-pressure re-engagement, not a hard sell',
+    isReturning: true,
+  },
+  new_visitor: {
+    description: 'someone who has never signed up before - aim for a welcoming, exciting first impression',
+    isReturning: false,
+  },
+  vip: {
+    description: 'a loyal, highly engaged fan who already receives frequent updates - aim to make them feel recognized and valued',
+    isReturning: false,
+  },
 };
 
 const PROFILE_COOKIE_MAX_AGE = 60 * 60 * 24 * 30; // 30 days
@@ -141,12 +161,30 @@ const ESPN_FETCH_HEADERS = { 'User-Agent': 'curl/8.7.1' };
 const highlightCache = new Map();
 const HIGHLIGHT_CACHE_TTL_MS = 10 * 60 * 1000;
 
+// ESPN's schedule endpoint defaults to seasontype=1 (preseason) only, with no
+// indication in the response that it's a partial view - once preseason ends,
+// that endpoint alone returns only past games, so the "next game" lookup
+// would silently find nothing for the rest of the year. Preseason (1),
+// regular season (2), and postseason (3) are fetched and merged so the next
+// real game is found correctly regardless of which phase of the year it is.
+const SEASON_TYPES = [1, 2, 3];
+
 async function fetchNextEvent(abbr) {
-  const res = await fetch(`${ESPN_ORIGIN}/teams/${abbr}/schedule`, { headers: ESPN_FETCH_HEADERS });
-  if (!res.ok) return null;
-  const data = await res.json();
+  const responses = await Promise.all(
+    SEASON_TYPES.map((seasontype) => fetch(
+      `${ESPN_ORIGIN}/teams/${abbr}/schedule?seasontype=${seasontype}`,
+      { headers: ESPN_FETCH_HEADERS },
+    ).catch(() => null)),
+  );
+  const events = [];
+  await Promise.all(responses.map(async (res) => {
+    if (!res || !res.ok) return;
+    const data = await res.json();
+    events.push(...(data.events || []));
+  }));
+
   const now = Date.now();
-  const upcoming = (data.events || [])
+  const upcoming = events
     .filter((e) => new Date(e.date).getTime() >= now)
     .sort((a, b) => new Date(a.date) - new Date(b.date));
   const next = upcoming[0];
@@ -226,21 +264,41 @@ function parseCookies(request) {
 function resolveCustomerProfile(request, url) {
   const qpSegment = url.searchParams.get('segment');
   if (qpSegment && CUSTOMER_SEGMENTS[qpSegment]) {
-    return { segment: qpSegment, name: url.searchParams.get('name') || null, fresh: true };
+    return {
+      segment: qpSegment,
+      name: url.searchParams.get('name') || null,
+      lastname: url.searchParams.get('lastname') || null,
+      email: url.searchParams.get('email') || null,
+      fresh: true,
+    };
   }
   const cookies = parseCookies(request);
   if (cookies.profile_segment && CUSTOMER_SEGMENTS[cookies.profile_segment]) {
-    return { segment: cookies.profile_segment, name: cookies.profile_name || null, fresh: false };
+    return {
+      segment: cookies.profile_segment,
+      name: cookies.profile_name || null,
+      lastname: cookies.profile_lastname || null,
+      email: cookies.profile_email || null,
+      fresh: false,
+    };
   }
   return null;
 }
 
 function buildProfilePrompt(segment, name) {
+  const { description, isReturning } = CUSTOMER_SEGMENTS[segment];
   const nameClause = name
     ? `Address them by name: ${name}.`
     : 'No name is known - address them generically, do not invent one.';
-  return `You are writing personalized copy for an NFL newsletter sign-up page, for this specific type of visitor: ${CUSTOMER_SEGMENTS[segment]}.
+  // Without this, the model defaults to generic "welcome back" boilerplate
+  // regardless of segment, which is actively wrong for vip/new_visitor (they
+  // haven't been away) and makes segments read as indistinguishable.
+  const returningClause = isReturning
+    ? 'This fan has been away for a while, so "welcome back" style language is appropriate.'
+    : 'This fan has NOT been away - never use "welcome back," "come back," or any language implying absence. They are either brand new or have stayed continuously engaged.';
+  return `You are writing personalized copy for an NFL newsletter sign-up page, for this specific type of visitor: ${description}.
 ${nameClause}
+${returningClause}
 Use ONLY the facts given here - do not invent any offer, discount, date, or other detail not stated.
 Return ONLY a JSON object with exactly these three keys:
 {"title": "...", "description": "...", "favoriteTeamLabel": "..."}
@@ -272,26 +330,47 @@ async function getProfileCopy(segment, name) {
 function appendProfileCookies(headers, profile) {
   if (!profile.fresh) return;
   headers.append('Set-Cookie', `profile_segment=${encodeURIComponent(profile.segment)}; Path=/; Max-Age=${PROFILE_COOKIE_MAX_AGE}; SameSite=Lax`);
-  if (profile.name) {
-    headers.append('Set-Cookie', `profile_name=${encodeURIComponent(profile.name)}; Path=/; Max-Age=${PROFILE_COOKIE_MAX_AGE}; SameSite=Lax`);
-  }
+  ['name', 'lastname', 'email'].forEach((field) => {
+    if (profile[field]) {
+      headers.append('Set-Cookie', `profile_${field}=${encodeURIComponent(profile[field])}; Path=/; Max-Age=${PROFILE_COOKIE_MAX_AGE}; SameSite=Lax`);
+    }
+  });
 }
 
 // Relabels the favorite-team field with the AI-phrased copy, and - only for
 // brands with a known default team (a real signal: which brand's page this
 // is) and only when the visitor hasn't already got a value - preselects it.
 // Never touches fields with no such real-world signal (e.g. DOB).
-function applyFieldPersonalization(body, copy, pathname) {
+function applyFieldPersonalization(body, copy, pathname, profile) {
   const favoriteTeamRow = body.data.find((row) => row.Name === 'favoriteteam');
-  if (!favoriteTeamRow) return body;
+  if (favoriteTeamRow) {
+    favoriteTeamRow.Label = copy.favoriteTeamLabel;
 
-  favoriteTeamRow.Label = copy.favoriteTeamLabel;
-
-  const brand = pathname.split('/').filter(Boolean)[0];
-  const defaultTeam = BRAND_DEFAULT_TEAM[brand];
-  if (defaultTeam && !favoriteTeamRow.Value) {
-    favoriteTeamRow.Value = defaultTeam;
+    const brand = pathname.split('/').filter(Boolean)[0];
+    const defaultTeam = BRAND_DEFAULT_TEAM[brand];
+    if (defaultTeam && !favoriteTeamRow.Value) {
+      favoriteTeamRow.Value = defaultTeam;
+    }
   }
+
+  // Autofills contact fields only when the profile carries more than just a
+  // first name - lastname or email present means a real CRM/RTCDP contact
+  // record was matched, not just a marketing-link personalization token. A
+  // bare first name alone (e.g. Alex's URL) still drives the title and label
+  // copy, but does not by itself justify pre-filling the actual form fields.
+  if (profile.lastname || profile.email) {
+    const knownValues = {
+      firstname: profile.name,
+      lastname: profile.lastname,
+      email: profile.email,
+    };
+    Object.entries(knownValues).forEach(([fieldName, value]) => {
+      if (!value) return;
+      const row = body.data.find((r) => r.Name === fieldName);
+      if (row && !row.Value) row.Value = value;
+    });
+  }
+
   return body;
 }
 
@@ -337,7 +416,7 @@ async function personalizeHtmlResponse(aemRes, profile, pathname) {
 const formJsonCache = new Map();
 
 async function personalizeFormJson(aemRes, profile, pathname) {
-  const cacheKey = `${pathname}::${profile.segment}::${profile.name || ''}`;
+  const cacheKey = `${pathname}::${profile.segment}::${profile.name || ''}::${profile.lastname || ''}::${profile.email || ''}`;
   let json = formJsonCache.get(cacheKey);
 
   if (!json) {
@@ -347,7 +426,7 @@ async function personalizeFormJson(aemRes, profile, pathname) {
     } else {
       try {
         const copy = await getProfileCopy(profile.segment, profile.name);
-        applyFieldPersonalization(body, copy, pathname);
+        applyFieldPersonalization(body, copy, pathname, profile);
         json = JSON.stringify(body);
         formJsonCache.set(cacheKey, json);
         console.log(`[localize-worker] Personalized fields for ${pathname}, segment=${profile.segment}`);
@@ -472,12 +551,21 @@ ${entries}
 Output the same keys with their ${language} translations, as one JSON object.`;
 }
 
+// Translating a whole form (a few dozen strings in one prompt) is a much
+// larger generation than the short single-message calls elsewhere in this
+// file, and non-Latin scripts make it worse: Hindi's Devanagari output needs
+// substantially more tokens per word than Spanish/French, so the same form
+// that translates in a few seconds into those languages can still be
+// actively generating past the default 120s timeout for Hindi - confirmed
+// directly (translation still in progress at the 120s cutoff, not stalled).
+const FORM_TRANSLATION_TIMEOUT_MS = 240_000;
+
 async function translateSheetForm(body, lang) {
   const strings = collectTranslatable(body.data);
   if (Object.keys(strings).length === 0) return body;
 
   const language = SUPPORTED_LANGS[lang];
-  const raw = await askOllama(buildPrompt(strings, language));
+  const raw = await askOllama(buildPrompt(strings, language), FORM_TRANSLATION_TIMEOUT_MS);
   const translated = parseJsonResponse(raw);
   if (!translated) throw new Error(`Non-JSON translation response: ${raw.slice(0, 200)}`);
 
@@ -489,7 +577,7 @@ async function translateSheetForm(body, lang) {
 // aem up/da.live's own routing doesn't expect them, and passing them through
 // caused a broken/mixed response (a 404 fragment appearing alongside real
 // page content) rather than a clean pass-through.
-const WORKER_ONLY_PARAMS = new Set(['lang', 'segment', 'name']);
+const WORKER_ONLY_PARAMS = new Set(['lang', 'segment', 'name', 'lastname', 'email']);
 
 function buildAemUrl(url) {
   const aemUrl = new URL(AEM_ORIGIN);
@@ -522,7 +610,9 @@ export default {
     // only, and only when an explicit profile signal exists via cookie or
     // query param - everything else falls straight through to the existing
     // untouched JSON/passthrough logic below.
+    let cookieSensitive = false;
     if (isHtml && request.method === 'GET' && aemRes.ok) {
+      cookieSensitive = true;
       const profile = resolveCustomerProfile(request, url);
       if (profile) {
         return personalizeHtmlResponse(aemRes, profile, url.pathname);
@@ -535,6 +625,7 @@ export default {
     // also requested on the same request - combining both isn't part of this
     // demo, and translation below takes priority in that case.
     if (isJson && request.method === 'GET' && aemRes.ok && !(lang && SUPPORTED_LANGS[lang])) {
+      cookieSensitive = true;
       const profile = resolveCustomerProfile(request, url);
       if (profile) {
         return personalizeFormJson(aemRes, profile, url.pathname);
@@ -543,14 +634,19 @@ export default {
 
     // Transparent proxy: no lang, unsupported lang, or non-JSON response.
     if (!isJson || !lang || !SUPPORTED_LANGS[lang]) {
+      if (cookieSensitive) {
+        // This request was checked for a cookie-driven profile above, even
+        // though none matched this time. aem up's own Cache-Control (e.g.
+        // "max-age=60") has no Vary: Cookie, so a browser or shared cache
+        // would happily replay this exact response to a later request that
+        // *does* carry a profile cookie, silently suppressing personalization
+        // until the cache entry expires. Force no-store so every cookie-
+        // checked request is re-evaluated by this Worker every time.
+        const passthroughHeaders = new Headers(aemRes.headers);
+        passthroughHeaders.set('Cache-Control', 'no-store');
+        return new Response(aemRes.body, { status: aemRes.status, headers: passthroughHeaders });
+      }
       return aemRes;
-    }
-
-    const cacheKey = `${url.pathname}::${lang}`;
-    if (translationCache.has(cacheKey)) {
-      return new Response(translationCache.get(cacheKey), {
-        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
-      });
     }
 
     const body = await aemRes.json();
@@ -564,10 +660,25 @@ export default {
       });
     }
 
+    // The origin fetch above already happens on every request (this worker
+    // is a proxy, not a cache in front of aem up), so this comparison costs
+    // nothing extra over the network - only a cheap in-memory string check.
+    // A byte-for-byte-unchanged sourceJson means the sheet hasn't been
+    // edited since the last translation, so the cached result is still
+    // exactly correct and the slow Ollama call is skipped entirely.
+    const cacheKey = `${url.pathname}::${lang}`;
+    const sourceJson = JSON.stringify(body);
+    const cached = translationCache.get(cacheKey);
+    if (cached && cached.sourceJson === sourceJson) {
+      return new Response(cached.json, {
+        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+      });
+    }
+
     try {
       const translatedBody = await translateSheetForm(body, lang);
       const json = JSON.stringify(translatedBody);
-      translationCache.set(cacheKey, json);
+      translationCache.set(cacheKey, { sourceJson, json });
       console.log(`[localize-worker] Translated ${url.pathname} -> ${lang}`);
       return new Response(json, {
         headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },

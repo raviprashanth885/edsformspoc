@@ -189,11 +189,19 @@ export default class RuleEngine {
   // eslint-disable-next-line class-methods-use-this
   visibleUpdate(fieldId, value) {
     const element = this.formTag.querySelector(`#${fieldId}`);
+    if (element instanceof NodeList) return;
     let wrapper = element;
     if (!isFieldset(element)) {
       wrapper = element.closest('.field-wrapper');
     }
     wrapper.dataset.visible = value;
+    // A field hidden via [data-visible="false"] is only hidden by CSS
+    // (display: none); per the HTML spec that alone does not exempt it from
+    // constraint validation or from being included in submitted form data.
+    // Disabling it while hidden does both, so a hidden required field can
+    // never silently block submission (the classic symptom: clicking Submit
+    // does nothing, because native validation focuses an invisible field).
+    element.disabled = !value;
   }
 
   // eslint-disable-next-line class-methods-use-this

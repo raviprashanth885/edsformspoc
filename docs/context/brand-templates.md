@@ -17,7 +17,10 @@ code:
 - A single da.live Sheet named `metadata` at the site root, with a `URL`
   column (glob patterns, e.g. `/chiefs/**`) and one column per property:
   `title`, `description`, `logo`, `background-color`, `text-color`,
-  `link-color`, `card-background-color`, `font`.
+  `link-color`, `card-background-color`, `font`. `logo` accepts a
+  comma-separated list of one or more image paths, the same convention this
+  project's forms already use for `Options`/`OptionNames` - a single path
+  renders one logo as before, additional paths render extra logos beside it.
 - Rows are evaluated top-to-bottom; a site-wide `/**` default row must come
   before more specific brand rows.
 - A page's own inline Page Metadata block always overrides the bulk sheet -
@@ -39,12 +42,23 @@ form is embedded in the page's Form block.
   be available on the site (an existing `/fonts` file or an already-linked
   font); this does not load fonts dynamically.
 - `scripts/scripts.js` `decorateBrandBanner()`: reads `logo`/`title`/
-  `description` metadata and prepends a `.brand-banner` element (logo image,
-  heading, description) to `<main>`, before the page's authored sections.
-  **Opt-in**: only renders when `logo` is present, so pages/sites without a
-  brand logo (e.g. internal test pages) are unaffected.
+  `description` metadata and prepends a `.brand-banner` element (logo
+  image(s), heading, description) to `<main>`, before the page's authored
+  sections. **Opt-in**: only renders when `logo` is present, so pages/sites
+  without a brand logo (e.g. internal test pages) are unaffected. `logo` is
+  split on comma (trimmed, same as `handleMultiValues()` in
+  `blocks/form/transform.js`), so one path renders the original single-logo
+  layout unchanged, and two or more render multiple logos side by side (e.g.
+  a co-branded partner or sponsor mark).
 - `styles/styles.css`:
   - `.brand-banner` - generic layout for the logo/title/description banner.
+    Logos are appended directly as `<picture>` siblings, deliberately with no
+    wrapping `<div>` - EDS's own `decorateSections()` auto-wraps any classed
+    div placed as a section child, and that wrapper then matches
+    `decorateBlocks()`'s generic block-detection selector, so a manually
+    added container div gets mistaken for an authored content block. Multiple
+    `<picture>` elements (inline by default) sit side by side on their own;
+    `.brand-banner picture + picture` adds the gap between adjacent logos.
   - `main .section:has(.form)` - generic card styling (background via
     `--card-background-color`) so a form reads as a distinct card against
     whatever background color a brand sets, automatically, for any brand.

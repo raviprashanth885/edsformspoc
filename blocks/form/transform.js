@@ -171,6 +171,8 @@ export default class DocBasedFormToAF {
     'Min Error Message': 'constraintMessages.min',
     'Max Error Message': 'constraintMessages.max',
     'Custom Type': ':type',
+    'Redirect URL': 'redirectUrl',
+    'Thank You Message': 'thankYouMsg',
   };
 
   /**
@@ -256,11 +258,10 @@ export default class DocBasedFormToAF {
         this.#transformFieldNames(field);
 
         if (field?.fieldType === 'submit') {
-          const submitValue = field.value;
-          if (submitValue.startsWith('https')) {
-            formDef.redirectUrl = submitValue;
-          } else if (submitValue) {
-            formDef.thankYouMsg = submitValue;
+          if (field.redirectUrl) {
+            formDef.redirectUrl = field.redirectUrl;
+          } else if (field.thankYouMsg) {
+            formDef.thankYouMsg = field.thankYouMsg;
           }
         }
 

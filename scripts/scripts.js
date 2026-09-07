@@ -96,6 +96,12 @@ export function decorateMain(main) {
  * is present, so pages/brands without one are unaffected. Values normally
  * come from the site's bulk metadata sheet (cascaded per brand by URL) and
  * can be overridden per page via that page's own Page Metadata block.
+ *
+ * `logo` accepts a comma-separated list of one or more image paths, the same
+ * authoring convention this project's forms already use for `Options`/
+ * `OptionNames` - a single path renders exactly as before, additional paths
+ * render as extra logos beside it (e.g. a co-branded partner or sponsor
+ * mark).
  * @param {Element} main The main element
  */
 function decorateBrandBanner(main) {
@@ -105,10 +111,19 @@ function decorateBrandBanner(main) {
   // not a <meta name="title"> tag, so it isn't readable via getMetadata().
   const { title } = document;
   const description = getMetadata('description');
+  const logos = logo.split(',').map((path) => path.trim()).filter(Boolean);
 
+  // Pictures are appended directly, with no wrapping <div>: EDS's own
+  // decorateSections() auto-wraps any classed div placed as a section child,
+  // and that generated wrapper then matches decorateBlocks()'s generic
+  // `div.section > div > div` selector, causing the platform to treat it as
+  // an authored content block (adding data-block-name, extra wrapper divs,
+  // etc.) - a real, non-obvious collision. <picture> is inline by default,
+  // so multiple of them sit side by side with no wrapper needed at all.
   const banner = document.createElement('div');
   banner.className = 'brand-banner';
-  banner.append(createOptimizedPicture(logo, title));
+  logos.forEach((path) => banner.append(createOptimizedPicture(path, title)));
+
   if (title) {
     const heading = document.createElement('h1');
     heading.textContent = title;

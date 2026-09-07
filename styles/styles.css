@@ -81,6 +81,17 @@ body {
   line-height: 1.6;
 }
 
+/* Reserves permanent clearance for the form's fixed top-right language
+   switcher (.form-language-switcher, form.css) - since it's position:fixed,
+   it stays in the same viewport spot through the entire page's scroll
+   range, not just near the top, so whatever content happens to scroll
+   under that spot would otherwise get covered by it at any scroll depth,
+   not only at the very top of the page. Scoped with :has() so pages/blocks
+   that never render the switcher aren't pushed down for no reason. */
+body:has(.form-language-switcher) {
+  padding-top: 60px;
+}
+
 body.appear {
   display: block;
 }
@@ -267,13 +278,20 @@ main .section.highlight {
 .brand-banner.section {
   max-width: 600px;
   margin: 0 auto;
-  padding: 40px 24px;
+  padding: 24px 24px 16px;
   text-align: center;
 }
 
 .brand-banner picture img {
   max-width: 200px;
   height: auto;
+  vertical-align: middle;
+}
+
+/* Only applies a gap when a second logo (secondary-logo metadata) is
+   present - a single logo is unaffected. */
+.brand-banner picture + picture {
+  margin-left: 24px;
 }
 
 .brand-banner h1,
@@ -286,6 +304,7 @@ main .section.highlight {
   text-transform: uppercase;
   font-weight: 800;
   line-height: 1.1;
+  overflow-wrap: break-word;
 }
 
 /*
@@ -297,9 +316,9 @@ main .section.highlight {
  */
 main .section:has(.form) {
   max-width: 600px;
-  margin: 40px auto;
-  border-radius: 8px;
-  padding: 24px;
+  margin: 20px auto;
+  border-radius: 12px;
+  padding: 20px;
   background-color: var(--card-background-color);
   color: var(--dark-color);
 }

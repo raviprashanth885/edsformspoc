@@ -80,8 +80,13 @@ function renderLoading(popup) {
 }
 
 function getActiveLanguage() {
-  const active = document.querySelector('.language-switcher-button[aria-pressed="true"]');
-  return active?.dataset.lang || 'en';
+  // dataset.currentLang (not .value) tracks the language of the form as it's
+  // actually rendered right now - decorateLanguageSwitcher() in form.js only
+  // sets it once a switch's translated form has finished loading and been
+  // swapped in, so this can't report a pending selection whose translation
+  // hasn't landed yet.
+  const select = document.querySelector('.language-switcher-select');
+  return select?.dataset.currentLang || 'en';
 }
 
 export default function decorate(fieldDiv) {

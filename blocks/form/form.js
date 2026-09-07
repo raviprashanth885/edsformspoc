@@ -620,50 +620,79 @@ export async function renderForm(formDef, element) {
 
 // Re-fetches the form's own JSON with ?lang= appended (through the local
 // localize-worker proxy, which translates display text server-side) and
-// swaps the rendered form in place. No-op UI-wise beyond the button state;
+// swaps the rendered form in place. No-op UI-wise beyond the select's value;
 // setupForm()/fetchForm() do all the real work, same as a normal load.
+//
+// Rendered as a <select> (not a button row) fixed to the page's top-right
+// corner - see `.form-language-switcher` in form.css. Fixed positioning
+// means its position in the DOM doesn't matter for placement, so it stays
+// anchored right where decorate() already puts it (a sibling before the
+// form), keeping this change isolated to markup/CSS with no effect on the
+// surrounding decorate()/setupForm() wiring.
 function decorateLanguageSwitcher(initialForm, href, pathname, block, editMode) {
   const switcher = document.createElement('div');
   switcher.className = 'form-language-switcher';
   let currentForm = initialForm;
-  SUPPORTED_LANGUAGES.forEach(({ code, label }) => {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'language-switcher-button';
-    btn.textContent = label;
-    btn.dataset.lang = code;
-    btn.setAttribute('aria-pressed', String(code === 'en'));
-    btn.addEventListener('click', async () => {
-      if (switcher.classList.contains('loading') || btn.getAttribute('aria-pressed') === 'true') return;
-      const url = new URL(href, window.location.href);
-      if (code === 'en') {
-        url.searchParams.delete('lang');
-      } else {
-        url.searchParams.set('lang', code);
-      }
-      // A first-time translation of the full form can take a while (a large
-      // local model translating ~60 strings in one batch) - disable the
-      // switcher and show a loading state so the wait doesn't read as the
-      // page being broken, and so a second click can't fire an overlapping
-      // request against the same single-threaded local LLM.
-      switcher.classList.add('loading');
-      switcher.querySelectorAll('button').forEach((b) => { b.disabled = true; });
-      try {
-        const formDef = await fetchForm(url.toString());
-        if (!formDef) return;
-        const { form: newForm } = await setupForm(formDef, { pathname, block, editMode });
-        currentForm.replaceWith(newForm);
-        currentForm = newForm;
-        switcher.querySelectorAll('button').forEach((b) => {
-          b.setAttribute('aria-pressed', String(b === btn));
-        });
-      } finally {
-        switcher.classList.remove('loading');
-        switcher.querySelectorAll('button').forEach((b) => { b.disabled = false; });
-      }
-    });
-    switcher.append(btn);
+
+  // Wrapping the select in its <label> (rather than a separate for/id pair)
+  // associates them without needing a page-unique id - safe even if more
+  // than one Form block/switcher ends up on the same page.
+  const label = document.createElement('label');
+  label.className = 'language-switcher-label';
+
+  const title = document.createElement('span');
+  title.className = 'language-switcher-title';
+  title.textContent = 'Language Switcher';
+  label.append(title);
+
+  const select = document.createElement('select');
+  select.className = 'language-switcher-select';
+  SUPPORTED_LANGUAGES.forEach(({ code, label: langLabel }) => {
+    const option = document.createElement('option');
+    option.value = code;
+    option.textContent = langLabel;
+    select.append(option);
   });
+  select.value = 'en';
+  label.append(select);
+
+  select.addEventListener('change', async () => {
+    const code = select.value;
+    if (switcher.classList.contains('loading')) return;
+    const url = new URL(href, window.location.href);
+    if (code === 'en') {
+      url.searchParams.delete('lang');
+    } else {
+      url.searchParams.set('lang', code);
+    }
+    // A first-time translation of the full form can take a while (a large
+    // local model translating ~60 strings in one batch) - disable the
+    // switcher and show a loading state so the wait doesn't read as the
+    // page being broken, and so a second change can't fire an overlapping
+    // request against the same single-threaded local LLM.
+    const previousCode = select.dataset.currentLang || 'en';
+    switcher.classList.add('loading');
+    select.disabled = true;
+    try {
+      const formDef = await fetchForm(url.toString());
+      if (!formDef) {
+        select.value = previousCode;
+        return;
+      }
+      const { form: newForm } = await setupForm(formDef, { pathname, block, editMode });
+      currentForm.replaceWith(newForm);
+      currentForm = newForm;
+      select.dataset.currentLang = code;
+    } catch (e) {
+      select.value = previousCode;
+      throw e;
+    } finally {
+      switcher.classList.remove('loading');
+      select.disabled = false;
+    }
+  });
+
+  switcher.append(label);
   return switcher;
 }
 

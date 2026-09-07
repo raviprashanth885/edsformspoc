@@ -18,9 +18,10 @@ var ALWAYS_TRANSLATE_COLUMNS = [
   "Required Error Message",
   "Pattern Error Message",
   "Min Error Message",
-  "Max Error Message"
+  "Max Error Message",
+  "Thank You Message"
 ];
-var VALUE_IS_DISPLAY_TEXT_FOR_TYPES = /* @__PURE__ */ new Set(["plain-text", "plaintext", "submit", "button", "reset"]);
+var VALUE_IS_DISPLAY_TEXT_FOR_TYPES = /* @__PURE__ */ new Set(["plain-text", "plaintext", "button", "reset"]);
 var MAX_OPTION_ITEMS_TO_TRANSLATE = 60;
 var translationCache = /* @__PURE__ */ new Map();
 var NFL_TEAMS = {
@@ -58,9 +59,18 @@ var NFL_TEAMS = {
   Commanders: { abbr: "wsh", fullName: "Washington Commanders" }
 };
 var CUSTOMER_SEGMENTS = {
-  lapsed: "a fan who signed up before but has not engaged in a while - aim for a warm, low-pressure re-engagement, not a hard sell",
-  new_visitor: "someone who has never signed up before - aim for a welcoming, exciting first impression",
-  vip: "a loyal, highly engaged fan who already receives frequent updates - aim to make them feel recognized and valued"
+  lapsed: {
+    description: "a fan who signed up before but has not engaged in a while - aim for a warm, low-pressure re-engagement, not a hard sell",
+    isReturning: true
+  },
+  new_visitor: {
+    description: "someone who has never signed up before - aim for a welcoming, exciting first impression",
+    isReturning: false
+  },
+  vip: {
+    description: "a loyal, highly engaged fan who already receives frequent updates - aim to make them feel recognized and valued",
+    isReturning: false
+  }
 };
 var PROFILE_COOKIE_MAX_AGE = 60 * 60 * 24 * 30;
 var BRAND_DEFAULT_TEAM = {
@@ -71,12 +81,22 @@ var ESPN_ORIGIN = "https://site.api.espn.com/apis/site/v2/sports/football/nfl";
 var ESPN_FETCH_HEADERS = { "User-Agent": "curl/8.7.1" };
 var highlightCache = /* @__PURE__ */ new Map();
 var HIGHLIGHT_CACHE_TTL_MS = 10 * 60 * 1e3;
+var SEASON_TYPES = [1, 2, 3];
 async function fetchNextEvent(abbr) {
-  const res = await fetch(`${ESPN_ORIGIN}/teams/${abbr}/schedule`, { headers: ESPN_FETCH_HEADERS });
-  if (!res.ok) return null;
-  const data = await res.json();
+  const responses = await Promise.all(
+    SEASON_TYPES.map((seasontype) => fetch(
+      `${ESPN_ORIGIN}/teams/${abbr}/schedule?seasontype=${seasontype}`,
+      { headers: ESPN_FETCH_HEADERS }
+    ).catch(() => null))
+  );
+  const events = [];
+  await Promise.all(responses.map(async (res) => {
+    if (!res || !res.ok) return;
+    const data = await res.json();
+    events.push(...data.events || []);
+  }));
   const now = Date.now();
-  const upcoming = (data.events || []).filter((e) => new Date(e.date).getTime() >= now).sort((a, b) => new Date(a.date) - new Date(b.date));
+  const upcoming = events.filter((e) => new Date(e.date).getTime() >= now).sort((a, b) => new Date(a.date) - new Date(b.date));
   const next = upcoming[0];
   if (!next) return null;
   return { name: next.name, date: next.date };
@@ -148,19 +168,34 @@ __name(parseCookies, "parseCookies");
 function resolveCustomerProfile(request, url) {
   const qpSegment = url.searchParams.get("segment");
   if (qpSegment && CUSTOMER_SEGMENTS[qpSegment]) {
-    return { segment: qpSegment, name: url.searchParams.get("name") || null, fresh: true };
+    return {
+      segment: qpSegment,
+      name: url.searchParams.get("name") || null,
+      lastname: url.searchParams.get("lastname") || null,
+      email: url.searchParams.get("email") || null,
+      fresh: true
+    };
   }
   const cookies = parseCookies(request);
   if (cookies.profile_segment && CUSTOMER_SEGMENTS[cookies.profile_segment]) {
-    return { segment: cookies.profile_segment, name: cookies.profile_name || null, fresh: false };
+    return {
+      segment: cookies.profile_segment,
+      name: cookies.profile_name || null,
+      lastname: cookies.profile_lastname || null,
+      email: cookies.profile_email || null,
+      fresh: false
+    };
   }
   return null;
 }
 __name(resolveCustomerProfile, "resolveCustomerProfile");
 function buildProfilePrompt(segment, name) {
+  const { description, isReturning } = CUSTOMER_SEGMENTS[segment];
   const nameClause = name ? `Address them by name: ${name}.` : "No name is known - address them generically, do not invent one.";
-  return `You are writing personalized copy for an NFL newsletter sign-up page, for this specific type of visitor: ${CUSTOMER_SEGMENTS[segment]}.
+  const returningClause = isReturning ? 'This fan has been away for a while, so "welcome back" style language is appropriate.' : 'This fan has NOT been away - never use "welcome back," "come back," or any language implying absence. They are either brand new or have stayed continuously engaged.';
+  return `You are writing personalized copy for an NFL newsletter sign-up page, for this specific type of visitor: ${description}.
 ${nameClause}
+${returningClause}
 Use ONLY the facts given here - do not invent any offer, discount, date, or other detail not stated.
 Return ONLY a JSON object with exactly these three keys:
 {"title": "...", "description": "...", "favoriteTeamLabel": "..."}
@@ -186,19 +221,34 @@ __name(getProfileCopy, "getProfileCopy");
 function appendProfileCookies(headers, profile) {
   if (!profile.fresh) return;
   headers.append("Set-Cookie", `profile_segment=${encodeURIComponent(profile.segment)}; Path=/; Max-Age=${PROFILE_COOKIE_MAX_AGE}; SameSite=Lax`);
-  if (profile.name) {
-    headers.append("Set-Cookie", `profile_name=${encodeURIComponent(profile.name)}; Path=/; Max-Age=${PROFILE_COOKIE_MAX_AGE}; SameSite=Lax`);
-  }
+  ["name", "lastname", "email"].forEach((field) => {
+    if (profile[field]) {
+      headers.append("Set-Cookie", `profile_${field}=${encodeURIComponent(profile[field])}; Path=/; Max-Age=${PROFILE_COOKIE_MAX_AGE}; SameSite=Lax`);
+    }
+  });
 }
 __name(appendProfileCookies, "appendProfileCookies");
-function applyFieldPersonalization(body, copy, pathname) {
+function applyFieldPersonalization(body, copy, pathname, profile) {
   const favoriteTeamRow = body.data.find((row) => row.Name === "favoriteteam");
-  if (!favoriteTeamRow) return body;
-  favoriteTeamRow.Label = copy.favoriteTeamLabel;
-  const brand = pathname.split("/").filter(Boolean)[0];
-  const defaultTeam = BRAND_DEFAULT_TEAM[brand];
-  if (defaultTeam && !favoriteTeamRow.Value) {
-    favoriteTeamRow.Value = defaultTeam;
+  if (favoriteTeamRow) {
+    favoriteTeamRow.Label = copy.favoriteTeamLabel;
+    const brand = pathname.split("/").filter(Boolean)[0];
+    const defaultTeam = BRAND_DEFAULT_TEAM[brand];
+    if (defaultTeam && !favoriteTeamRow.Value) {
+      favoriteTeamRow.Value = defaultTeam;
+    }
+  }
+  if (profile.lastname || profile.email) {
+    const knownValues = {
+      firstname: profile.name,
+      lastname: profile.lastname,
+      email: profile.email
+    };
+    Object.entries(knownValues).forEach(([fieldName, value]) => {
+      if (!value) return;
+      const row = body.data.find((r) => r.Name === fieldName);
+      if (row && !row.Value) row.Value = value;
+    });
   }
   return body;
 }
@@ -242,7 +292,7 @@ async function personalizeHtmlResponse(aemRes, profile, pathname) {
 __name(personalizeHtmlResponse, "personalizeHtmlResponse");
 var formJsonCache = /* @__PURE__ */ new Map();
 async function personalizeFormJson(aemRes, profile, pathname) {
-  const cacheKey = `${pathname}::${profile.segment}::${profile.name || ""}`;
+  const cacheKey = `${pathname}::${profile.segment}::${profile.name || ""}::${profile.lastname || ""}::${profile.email || ""}`;
   let json = formJsonCache.get(cacheKey);
   if (!json) {
     const body = await aemRes.json();
@@ -251,7 +301,7 @@ async function personalizeFormJson(aemRes, profile, pathname) {
     } else {
       try {
         const copy = await getProfileCopy(profile.segment, profile.name);
-        applyFieldPersonalization(body, copy, pathname);
+        applyFieldPersonalization(body, copy, pathname, profile);
         json = JSON.stringify(body);
         formJsonCache.set(cacheKey, json);
         console.log(`[localize-worker] Personalized fields for ${pathname}, segment=${profile.segment}`);
@@ -356,18 +406,19 @@ ${entries}
 Output the same keys with their ${language} translations, as one JSON object.`;
 }
 __name(buildPrompt, "buildPrompt");
+var FORM_TRANSLATION_TIMEOUT_MS = 24e4;
 async function translateSheetForm(body, lang) {
   const strings = collectTranslatable(body.data);
   if (Object.keys(strings).length === 0) return body;
   const language = SUPPORTED_LANGS[lang];
-  const raw = await askOllama(buildPrompt(strings, language));
+  const raw = await askOllama(buildPrompt(strings, language), FORM_TRANSLATION_TIMEOUT_MS);
   const translated = parseJsonResponse(raw);
   if (!translated) throw new Error(`Non-JSON translation response: ${raw.slice(0, 200)}`);
   applyTranslations(body.data, translated);
   return body;
 }
 __name(translateSheetForm, "translateSheetForm");
-var WORKER_ONLY_PARAMS = /* @__PURE__ */ new Set(["lang", "segment", "name"]);
+var WORKER_ONLY_PARAMS = /* @__PURE__ */ new Set(["lang", "segment", "name", "lastname", "email"]);
 function buildAemUrl(url) {
   const aemUrl = new URL(AEM_ORIGIN);
   aemUrl.pathname = url.pathname;
@@ -390,26 +441,28 @@ var worker_default = {
     const contentType = aemRes.headers.get("content-type") || "";
     const isJson = contentType.includes("application/json");
     const isHtml = contentType.includes("text/html");
+    let cookieSensitive = false;
     if (isHtml && request.method === "GET" && aemRes.ok) {
+      cookieSensitive = true;
       const profile = resolveCustomerProfile(request, url);
       if (profile) {
         return personalizeHtmlResponse(aemRes, profile, url.pathname);
       }
     }
     if (isJson && request.method === "GET" && aemRes.ok && !(lang && SUPPORTED_LANGS[lang])) {
+      cookieSensitive = true;
       const profile = resolveCustomerProfile(request, url);
       if (profile) {
         return personalizeFormJson(aemRes, profile, url.pathname);
       }
     }
     if (!isJson || !lang || !SUPPORTED_LANGS[lang]) {
+      if (cookieSensitive) {
+        const passthroughHeaders = new Headers(aemRes.headers);
+        passthroughHeaders.set("Cache-Control", "no-store");
+        return new Response(aemRes.body, { status: aemRes.status, headers: passthroughHeaders });
+      }
       return aemRes;
-    }
-    const cacheKey = `${url.pathname}::${lang}`;
-    if (translationCache.has(cacheKey)) {
-      return new Response(translationCache.get(cacheKey), {
-        headers: { "Content-Type": "application/json", "Cache-Control": "no-store" }
-      });
     }
     const body = await aemRes.json();
     if (body?.[":type"] !== "sheet" || !Array.isArray(body.data)) {
@@ -418,10 +471,18 @@ var worker_default = {
         headers: { "Content-Type": "application/json" }
       });
     }
+    const cacheKey = `${url.pathname}::${lang}`;
+    const sourceJson = JSON.stringify(body);
+    const cached = translationCache.get(cacheKey);
+    if (cached && cached.sourceJson === sourceJson) {
+      return new Response(cached.json, {
+        headers: { "Content-Type": "application/json", "Cache-Control": "no-store" }
+      });
+    }
     try {
       const translatedBody = await translateSheetForm(body, lang);
       const json = JSON.stringify(translatedBody);
-      translationCache.set(cacheKey, json);
+      translationCache.set(cacheKey, { sourceJson, json });
       console.log(`[localize-worker] Translated ${url.pathname} -> ${lang}`);
       return new Response(json, {
         headers: { "Content-Type": "application/json", "Cache-Control": "no-store" }

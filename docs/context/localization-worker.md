@@ -53,9 +53,14 @@ The only thing to have running alongside it is `aem up` itself and Ollama.
    row data; the resulting JSON is returned in place of the original.
 5. Failures (Ollama down, malformed JSON back) fall back to serving the
    **original, untranslated** JSON rather than breaking the page.
-6. Translated JSON is cached in-memory per `(path, lang)` for the life of
-   the `wrangler dev` process, so repeat loads of the same language are
-   instant after the first (LLM) request.
+6. Translated JSON is cached in-memory per `(path, lang)`, keyed to the exact
+   untranslated sheet JSON it was translated from — no time-based expiry.
+   Repeat loads of the same language are instant after the first (LLM)
+   request, for as long as the sheet content is unchanged; editing the sheet
+   changes the fetched JSON, which is detected on the next request and
+   triggers exactly one fresh translation. The cache itself still only lives
+   for the life of the `wrangler dev` process (in-memory, not persisted to
+   disk) — restarting it clears everything back to a cold state.
 
 ## Known limitations
 
