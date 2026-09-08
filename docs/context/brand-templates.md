@@ -16,11 +16,17 @@ code:
 
 - A single da.live Sheet named `metadata` at the site root, with a `URL`
   column (glob patterns, e.g. `/chiefs/**`) and one column per property:
-  `title`, `description`, `logo`, `background-color`, `text-color`,
-  `link-color`, `card-background-color`, `font`. `logo` accepts a
-  comma-separated list of one or more image paths, the same convention this
+  `title`, `subtitle`, `description`, `logo`, `background-color`,
+  `text-color`, `link-color`, `card-background-color`, `font`. `logo` accepts
+  a comma-separated list of one or more image paths, the same convention this
   project's forms already use for `Options`/`OptionNames` - a single path
   renders one logo as before, additional paths render extra logos beside it.
+  `title` becomes the page's `<title>` element (see `decorateBrandBanner()`
+  below) - browsers only allow plain text there, so any rich formatting typed
+  into that cell (bold, a second paragraph) is silently flattened to one
+  plain string before it ever reaches this codebase. A short line under the
+  heading (event dates, a venue) needs the separate `subtitle` property
+  instead, which is an ordinary `<meta>` tag and keeps its own styling.
 - Rows are evaluated top-to-bottom; a site-wide `/**` default row must come
   before more specific brand rows.
 - A page's own inline Page Metadata block always overrides the bulk sheet -
@@ -42,16 +48,21 @@ form is embedded in the page's Form block.
   be available on the site (an existing `/fonts` file or an already-linked
   font); this does not load fonts dynamically.
 - `scripts/scripts.js` `decorateBrandBanner()`: reads `logo`/`title`/
-  `description` metadata and prepends a `.brand-banner` element (logo
-  image(s), heading, description) to `<main>`, before the page's authored
-  sections. **Opt-in**: only renders when `logo` is present, so pages/sites
-  without a brand logo (e.g. internal test pages) are unaffected. `logo` is
-  split on comma (trimmed, same as `handleMultiValues()` in
-  `blocks/form/transform.js`), so one path renders the original single-logo
-  layout unchanged, and two or more render multiple logos side by side (e.g.
-  a co-branded partner or sponsor mark).
+  `subtitle`/`description` metadata and prepends a `.brand-banner` element
+  (logo image(s), heading, subtitle, description) to `<main>`, before the
+  page's authored sections. **Opt-in**: only renders when `logo` is present,
+  so pages/sites without a brand logo (e.g. internal test pages) are
+  unaffected. `logo` is split on comma (trimmed, same as
+  `handleMultiValues()` in `blocks/form/transform.js`), so one path renders
+  the original single-logo layout unchanged, and two or more render multiple
+  logos side by side (e.g. a co-branded partner or sponsor mark). `subtitle`
+  is read via `getMetadata('subtitle')` like any other property - unlike
+  `title`, it isn't sourced from `document.title`, so it isn't limited to
+  plain text the way that property effectively is once da.live emits it.
 - `styles/styles.css`:
-  - `.brand-banner` - generic layout for the logo/title/description banner.
+  - `.brand-banner` - generic layout for the logo/title/subtitle/description
+    banner. `.brand-banner-subtitle` styles the optional subtitle line
+    (italic, smaller than the title) between the heading and description.
     Logos are appended directly as `<picture>` siblings, deliberately with no
     wrapping `<div>` - EDS's own `decorateSections()` auto-wraps any classed
     div placed as a section child, and that wrapper then matches

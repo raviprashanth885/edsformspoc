@@ -307,6 +307,13 @@ main .section.highlight {
   overflow-wrap: break-word;
 }
 
+.brand-banner-subtitle {
+  margin-top: 0.5em;
+  font-style: italic;
+  font-weight: 400;
+  font-size: var(--body-font-size-s);
+}
+
 /*
  * Any section containing a form gets a contrasting card automatically, no
  * per-brand CSS needed - it uses --card-background-color, which defaults to

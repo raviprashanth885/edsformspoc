@@ -109,7 +109,15 @@ function decorateBrandBanner(main) {
   if (!logo) return;
   // The `title` bulk-metadata property is emitted as the <title> element,
   // not a <meta name="title"> tag, so it isn't readable via getMetadata().
+  // <title> is a browser API that can only ever hold plain text - any rich
+  // formatting (bold, a second paragraph for a subtitle, etc.) authored into
+  // that cell in da.live is flattened to one plain string before this code,
+  // or even the browser, ever sees it. A short line under the heading (e.g.
+  // event dates/venue) needs its own metadata property instead of being
+  // crammed into Title - `subtitle` below is a plain `<meta>` tag like
+  // `description`, so it isn't subject to that flattening.
   const { title } = document;
+  const subtitle = getMetadata('subtitle');
   const description = getMetadata('description');
   const logos = logo.split(',').map((path) => path.trim()).filter(Boolean);
 
@@ -128,6 +136,12 @@ function decorateBrandBanner(main) {
     const heading = document.createElement('h1');
     heading.textContent = title;
     banner.append(heading);
+  }
+  if (subtitle) {
+    const subheading = document.createElement('p');
+    subheading.className = 'brand-banner-subtitle';
+    subheading.textContent = subtitle;
+    banner.append(subheading);
   }
   if (description) {
     const paragraph = document.createElement('p');
