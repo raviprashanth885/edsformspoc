@@ -629,10 +629,57 @@ export async function renderForm(formDef, element) {
 // anchored right where decorate() already puts it (a sibling before the
 // form), keeping this change isolated to markup/CSS with no effect on the
 // surrounding decorate()/setupForm() wiring.
+// The page-level brand banner (logo/title/description) is baked into the
+// page HTML from bulk metadata at decorate time (scripts.js), not from the
+// form's own sheet JSON - so switching language, which only re-fetches the
+// form's .json, never touches it. This mirrors that swap for the banner:
+// capture the true original English text once, then either restore it
+// (English) or ask the localize-worker's /api/translate-banner endpoint for
+// a translation of those exact original strings, keyed off the page path so
+// repeat switches are cached server-side the same way the form's own
+// translation is. Entirely best-effort - a page with no banner, or a worker
+// that isn't running (e.g. viewing aem up directly instead of through the
+// worker proxy), silently leaves the banner untouched rather than breaking
+// the language switch itself.
+function captureBannerText() {
+  const els = {
+    title: document.querySelector('.brand-banner h1'),
+    subtitle: document.querySelector('.brand-banner-subtitle'),
+    description: document.querySelector('.brand-banner-description'),
+  };
+  const original = {};
+  Object.entries(els).forEach(([key, el]) => {
+    if (el) original[key] = el.textContent;
+  });
+  return { els, original };
+}
+
+async function updateBannerText(code, { els, original }) {
+  if (Object.keys(original).length === 0) return;
+  if (code === 'en') {
+    Object.entries(els).forEach(([key, el]) => {
+      if (el && original[key]) el.textContent = original[key];
+    });
+    return;
+  }
+  try {
+    const params = new URLSearchParams({ lang: code, page: window.location.pathname, ...original });
+    const res = await fetch(`/api/translate-banner?${params.toString()}`);
+    if (!res.ok) return;
+    const translated = await res.json();
+    Object.entries(els).forEach(([key, el]) => {
+      if (el && translated[key]) el.textContent = translated[key];
+    });
+  } catch (e) {
+    // Best-effort - the form's own translation below is what matters most.
+  }
+}
+
 function decorateLanguageSwitcher(initialForm, href, pathname, block, editMode) {
   const switcher = document.createElement('div');
   switcher.className = 'form-language-switcher';
   let currentForm = initialForm;
+  const banner = captureBannerText();
 
   // Wrapping the select in its <label> (rather than a separate for/id pair)
   // associates them without needing a page-unique id - safe even if more
@@ -674,7 +721,12 @@ function decorateLanguageSwitcher(initialForm, href, pathname, block, editMode) 
     switcher.classList.add('loading');
     select.disabled = true;
     try {
+      // Sequential, not Promise.all - the local LLM behind both this and
+      // the form's own translation is single-threaded (see the loading-state
+      // guard above); firing them concurrently contends for the same model
+      // and was observed to silently break the form's own translation.
       const formDef = await fetchForm(url.toString());
+      await updateBannerText(code, banner);
       if (!formDef) {
         select.value = previousCode;
         return;

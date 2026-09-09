@@ -2,6 +2,7 @@
 coverage/*
 logs/*
 node_modules/*
+tools/localize-worker/.wrangler/*
 
 helix-importer-ui
 .DS_Store
@@ -11,6 +12,7 @@ helix-importer-ui
 
 .env*
 .vscode
+.certs/
 /test-results/
 /playwright-report/
 /blob-report/

@@ -101,6 +101,32 @@ rendered form in place — no different from a normal (re)load. The supported
 language list (`SUPPORTED_LANGUAGES` in `form.js`) must stay in sync with
 `SUPPORTED_LANGS` in `worker.js`.
 
+### Page banner (title/subtitle/description)
+
+The brand banner's title/subtitle/description (`.brand-banner h1`,
+`.brand-banner-subtitle`, `.brand-banner-description`) come from bulk
+metadata baked into the page HTML at decorate time (`scripts.js`'s
+`decorateBrandBanner()`), not from the form's own sheet JSON — so they fall
+outside `translateSheetForm()` entirely and need their own path.
+
+`decorateLanguageSwitcher()` captures each element's true original English
+text once (`captureBannerText()`), then on every language change calls
+`GET /api/translate-banner?lang=&page=&title=&subtitle=&description=` (the
+original strings it already captured, not whatever's currently on screen) in
+parallel with the form's own `.json` fetch, and writes the returned
+translations back into those elements. Switching back to `en` restores the
+captured original directly with no fetch, same as the rest of this worker's
+philosophy of never compounding translations across repeated switches.
+Server-side, `handleTranslateBanner()` in `worker.js` mirrors
+`translateSheetForm()`'s shape (same cache-by-source-string pattern, same
+graceful fallback to the original text on any failure) but is a much smaller,
+fixed 1–3-key translation rather than a whole sheet's worth of columns.
+
+A page with no banner, or a banner viewed directly against `aem up` instead
+of through this worker (so `/api/translate-banner` 404s), leaves the banner
+untouched without affecting the form's own translation — this path is
+entirely best-effort by design.
+
 ## Team highlight popup
 
 `blocks/form/components/team-highlight/team-highlight.js` is a custom

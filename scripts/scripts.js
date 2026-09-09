@@ -145,6 +145,7 @@ function decorateBrandBanner(main) {
   }
   if (description) {
     const paragraph = document.createElement('p');
+    paragraph.className = 'brand-banner-description';
     paragraph.textContent = description;
     banner.append(paragraph);
   }

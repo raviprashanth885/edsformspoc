@@ -12,8 +12,18 @@
     --form-background-color: var(--background-color-primary);
     --form-padding: 0 10px;
     --form-columns: 12;
-    --form-field-horz-gap: 40px;
-    --form-field-vert-gap: 8px;
+
+    /* 40px, tuned for the old 600px+ card, put 11 gaps (440px) alone past
+       the fixed 450px NFL-style card's ~410px inner width - the 12-column
+       grid was overflowing the card even for a single full-width field,
+       which is what pushed the tooltip trigger (main .form
+       .field-tooltip-trigger) outside the card's right edge entirely. The
+       card no longer widens with the viewport, so this can't be a
+       viewport-breakpoint fix (see the <=599px override below, which
+       doesn't help a narrow card on a wide screen) - it has to hold at
+       any width. */
+    --form-field-horz-gap: 16px;
+    --form-field-vert-gap: 4px;
     --form-invalid-border-color: #ca1b15;
     --form-input-padding: 0 10px;
     --form-input-font-size: 1rem;
@@ -81,12 +91,6 @@ form output {
 
 form:not(.edit-mode) [data-visible="false"] {
     display: none !important;
-}
-
-main .form-container {
-    background-color: var(--form-background-color);
-    padding: var(--form-padding);
-    width: var(--form-width);
 }
 
 main .form {
@@ -757,7 +761,7 @@ main .form form .checkbox-group-wrapper.horizontal .field-description {
 
 main div.form-wrapper {
     background: white;
-    padding: 40px;
+    padding: 24px 40px 40px;
     border-radius: 12px;
     box-shadow: 0 4px 24px rgb(0 0 0 / 8%);
 }
@@ -808,16 +812,20 @@ main .form .form-language-switcher {
    shrink-to-fit width sizing can wrap "Language Switcher" onto two lines
    on a narrow phone, ballooning the pill's height and pushing it into the
    logo below despite the clearance padding on .brand-banner.section. */
+
+/* text-shadow, not a background box - it's position:fixed and stays on
+   screen through the whole page, including once the user scrolls past
+   the dark banner onto the form's white card, where plain white text
+   would otherwise disappear. */
 main .form .form-language-switcher .language-switcher-label {
     display: flex;
     align-items: center;
     gap: 8px;
     padding: 6px 12px;
-    border-radius: 6px;
-    background-color: var(--background-color);
-    color: var(--dark-color);
+    color: white;
     font-size: 0.8125rem;
     white-space: nowrap;
+    text-shadow: 0 1px 3px rgb(0 0 0 / 60%);
 }
 
 /* Overrides width/height/margin from the generic `main .form select` field
@@ -827,15 +835,30 @@ main .form .form-language-switcher .language-switcher-label {
    top/bottom margins meant for real form fields, inflating this compact
    pill to 70px tall even though the color/background/border overrides
    here already won on specificity. */
+
+/* appearance: none - border: none alone only clears the CSS-authored
+   border; browsers still paint their own native widget chrome (a border/
+   bezel plus dropdown arrow) on a <select> left at its default
+   appearance: auto. Stripping that means supplying our own arrow, since
+   the native one goes with it - a small inline SVG chevron instead of
+   relying on the OS-drawn one. */
 main .form .form-language-switcher .language-switcher-select {
     width: auto;
     height: auto;
     margin: 0;
     border: none;
+    appearance: none;
     background-color: transparent;
-    color: var(--text-color);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8' fill='none'%3E%3Cpath d='M1 1l5 5 5-5' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 1px center;
+    background-size: 10px 7px;
+    padding-right: 16px;
+    color: white;
     font-size: 0.8125rem;
     cursor: pointer;
+    text-shadow: 0 1px 3px rgb(0 0 0 / 60%);
+    filter: drop-shadow(0 1px 2px rgb(0 0 0 / 60%));
 }
 
 main .form .form-language-switcher .language-switcher-select:disabled {
@@ -845,8 +868,9 @@ main .form .form-language-switcher .language-switcher-select:disabled {
 
 main .form .form-language-switcher.loading::after {
     margin-left: 6px;
-    color: var(--dark-color);
+    color: white;
     font-size: 0.75rem;
     font-style: italic;
     content: "Translating...";
+    text-shadow: 0 1px 3px rgb(0 0 0 / 60%);
 }

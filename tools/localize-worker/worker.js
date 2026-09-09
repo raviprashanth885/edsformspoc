@@ -482,6 +482,87 @@ async function handleTeamHighlight(url) {
   return new Response(JSON.stringify(body), { headers: { 'Content-Type': 'application/json' } });
 }
 
+// In-memory cache for the page-banner endpoint (title/subtitle/description),
+// keyed by `${page}::${lang}`, mirroring translationCache's shape below -
+// sourceJson kept alongside the result so an edited banner (different source
+// strings) is detected and re-translated rather than serving a stale cache.
+const bannerTranslationCache = new Map();
+
+function buildBannerPrompt(strings, language) {
+  const entries = Object.entries(strings)
+    .map(([key, text]) => `  ${JSON.stringify(key)}: ${JSON.stringify(text)}`)
+    .join(',\n');
+  return `You are translating a web page's hero heading copy into ${language}.
+
+Rules:
+- Keep exactly the same JSON keys in your response.
+- Keep translations natural and concise - do not add extra sentences or explanations.
+- Return ONLY a single valid JSON object, no markdown fences, no commentary.
+
+Input:
+{
+${entries}
+}
+
+Output the same keys with their ${language} translations, as one JSON object.`;
+}
+
+// GET /api/translate-banner?lang=xx&page=<pathname>&title=...&subtitle=...&description=...
+// Companion to the sheet-form translator above, for the page-level brand
+// banner (title/subtitle/description) - content that lives in bulk metadata
+// baked into the page HTML at decorate time, not in the form's own sheet
+// JSON, so it falls outside translateSheetForm() entirely. The client
+// (decorateLanguageSwitcher() in form.js) sends the original English text it
+// already has in the DOM and gets back translated strings for whichever keys
+// it sent; any key omitted from a successful response falls back to the
+// original untranslated value it was given, and any failure returns the
+// originals unchanged - this endpoint can never make banner text disappear,
+// only leave it untranslated.
+async function handleTranslateBanner(url) {
+  const lang = url.searchParams.get('lang');
+  const page = url.searchParams.get('page') || '';
+  const language = SUPPORTED_LANGS[lang];
+
+  const strings = {};
+  ['title', 'subtitle', 'description'].forEach((key) => {
+    const value = url.searchParams.get(key);
+    if (value) strings[key] = value;
+  });
+
+  if (!language || Object.keys(strings).length === 0) {
+    return new Response(JSON.stringify(strings), { headers: { 'Content-Type': 'application/json' } });
+  }
+
+  const cacheKey = `${page}::${lang}`;
+  const sourceJson = JSON.stringify(strings);
+  const cached = bannerTranslationCache.get(cacheKey);
+  if (cached && cached.sourceJson === sourceJson) {
+    return new Response(cached.json, {
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+    });
+  }
+
+  try {
+    const raw = await askOllama(buildBannerPrompt(strings, language));
+    const translated = parseJsonResponse(raw);
+    if (!translated) throw new Error(`Non-JSON translation response: ${raw.slice(0, 200)}`);
+
+    const merged = {};
+    Object.keys(strings).forEach((key) => { merged[key] = translated[key] || strings[key]; });
+    const json = JSON.stringify(merged);
+    bannerTranslationCache.set(cacheKey, { sourceJson, json });
+    console.log(`[localize-worker] Translated banner for ${page} -> ${lang}`);
+    return new Response(json, {
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+    });
+  } catch (err) {
+    console.error('[localize-worker] Banner translation failed, serving original:', err.message);
+    return new Response(JSON.stringify(strings), {
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+    });
+  }
+}
+
 // Collects every translatable string out of a sheet form's `data` rows into
 // a flat { key: text } map. OptionNames is comma-separated (see util.js
 // handleMultiValues()) so each option gets its own key - translating the
@@ -594,6 +675,10 @@ export default {
 
     if (url.pathname === '/api/team-highlight') {
       return handleTeamHighlight(url);
+    }
+
+    if (url.pathname === '/api/translate-banner') {
+      return handleTranslateBanner(url);
     }
 
     const lang = url.searchParams.get('lang');

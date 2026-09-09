@@ -283,7 +283,7 @@ main .section.highlight {
 }
 
 .brand-banner picture img {
-  max-width: 200px;
+  max-width: 160px;
   height: auto;
   vertical-align: middle;
 }
@@ -299,10 +299,16 @@ main .section.highlight {
   color: inherit;
 }
 
+/* Fixed size at every viewport width, deliberately not scaled by
+   breakpoint - matches id.nfl.com's own sign-up form, which measured out
+   to an identical 20px heading from 1280px down to 375px with no
+   intermediate steps. A narrow viewport wraps the text across more lines
+   (overflow-wrap, line-height) instead of shrinking it. */
 .brand-banner h1 {
   margin-top: 0.5em;
   text-transform: uppercase;
   font-weight: 800;
+  font-size: 2.75rem;
   line-height: 1.1;
   overflow-wrap: break-word;
 }
@@ -311,31 +317,7 @@ main .section.highlight {
   margin-top: 0.5em;
   font-style: italic;
   font-weight: 400;
-  font-size: var(--body-font-size-s);
-}
-
-/* Phone-sized viewports: the base tokens above 900px already shrink for
-   tablet/desktop, but below that everything (including actual phones)
-   shares the large mobile-first sizing, which is too big on a narrow
-   screen - overflow-wrap alone (see .brand-banner h1) only stops it
-   clipping, it doesn't make it look right. Same breakpoint form.css
-   already uses for its own mobile layout adjustments. */
-@media (width <= 599px) {
-  .brand-banner.section {
-    padding: 16px 16px 12px;
-  }
-
-  .brand-banner picture img {
-    max-width: 120px;
-  }
-
-  .brand-banner h1 {
-    font-size: var(--heading-font-size-l);
-  }
-
-  .brand-banner-subtitle {
-    font-size: var(--body-font-size-xs);
-  }
+  font-size: 1rem;
 }
 
 /*
@@ -345,11 +327,28 @@ main .section.highlight {
  * (see BRAND_STYLE_PROPERTIES in scripts.js) if a brand ever needs a
  * different card color against its own background.
  */
+
+/* Fixed-width card matching id.nfl.com's own sign-up form (measured
+   450px, 4px radius, that exact shadow). max-width alone isn't enough for
+   the narrow end of that responsiveness though - below ~498px viewport it
+   goes fully fluid and touches both screen edges with zero margin, unlike
+   id.nfl.com's own card, which measured a hard 24px inset from the screen
+   edge at 375px (x:24, width:327) even at its narrowest. width: calc(100%
+   - 48px) enforces that same 24px-per-side minimum at any width, while
+   max-width still caps it at 450px and margin: auto still centers it once
+   the viewport is wide enough for that cap to apply. */
 main .section:has(.form) {
-  max-width: 600px;
+  max-width: 450px;
+  width: calc(100% - 48px);
   margin: 20px auto;
-  border-radius: 12px;
-  padding: 20px;
-  background-color: var(--card-background-color);
   color: var(--dark-color);
+
+  /* id.nfl.com's own card uses this exact shadow at 16% opacity, but their
+     busy dark photo background hides most of it - copying that same value
+     onto our flat, saturated brand colors (solid red/navy) makes it read
+     as a visible border/outline instead of the near-invisible soft lift it
+     is on their site. Lower opacity here reproduces their actual visual
+     result (a subtle card lift, not a border) rather than their literal
+     CSS number. */
+  box-shadow: 0 2px 10px rgb(0 0 0 / 6%);
 }
