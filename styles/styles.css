@@ -314,6 +314,30 @@ main .section.highlight {
   font-size: var(--body-font-size-s);
 }
 
+/* Phone-sized viewports: the base tokens above 900px already shrink for
+   tablet/desktop, but below that everything (including actual phones)
+   shares the large mobile-first sizing, which is too big on a narrow
+   screen - overflow-wrap alone (see .brand-banner h1) only stops it
+   clipping, it doesn't make it look right. Same breakpoint form.css
+   already uses for its own mobile layout adjustments. */
+@media (width <= 599px) {
+  .brand-banner.section {
+    padding: 16px 16px 12px;
+  }
+
+  .brand-banner picture img {
+    max-width: 120px;
+  }
+
+  .brand-banner h1 {
+    font-size: var(--heading-font-size-l);
+  }
+
+  .brand-banner-subtitle {
+    font-size: var(--body-font-size-xs);
+  }
+}
+
 /*
  * Any section containing a form gets a contrasting card automatically, no
  * per-brand CSS needed - it uses --card-background-color, which defaults to
