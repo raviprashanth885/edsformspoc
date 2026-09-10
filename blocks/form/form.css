@@ -26,11 +26,11 @@
     --form-field-vert-gap: 4px;
     --form-invalid-border-color: #ca1b15;
     --form-input-padding: 0 10px;
-    --form-input-font-size: 1rem;
+    --form-input-font-size: 1.125rem;
     --form-input-disable-color: #ebebe4;
-    --form-input-border-size: 0;
-    --form-input-border-color: transparent;
-    --form-input-background-color: #f2f2f2;
+    --form-input-border-size: 1px;
+    --form-input-border-color: #666;
+    --form-input-background-color: white;
     --form-paragraph-color: var(--label-color);
     --form-paragraph-margin: 0 0 0.9rem;
     --form-paragraph-font-style: none;
@@ -226,14 +226,14 @@ main .form select {
     background-color: var(--form-input-background-color);
     border: var(--form-input-border-size) solid var(--form-input-border-color);
     width: 100%;
-    height: 42px;
+    height: 40px;
     color: var(--form-label-color);
     padding: var(--form-input-padding);
     font-size: var(--form-input-font-size);
     max-width: unset;
     margin-top: .5rem;
     margin-bottom: .5rem;
-    border-radius: 0.25rem;
+    border-radius: 4.5px;
 }
 
 /* Higher specificity than the shared input/textarea/select rule above, so
@@ -246,7 +246,7 @@ main .form select {
 main .form form select {
     display: flex;
     align-items: center;
-    height: 46px;
+    height: 44px;
     padding-top: 0;
     padding-bottom: 0;
   }
@@ -759,12 +759,6 @@ main .form form .checkbox-group-wrapper.horizontal .field-description {
     margin-top: 0.5rem;
 }
 
-main div.form-wrapper {
-    background: white;
-    padding: 24px 40px 40px;
-    border-radius: 12px;
-    box-shadow: 0 4px 24px rgb(0 0 0 / 8%);
-}
 
 /* Responsive adjustments for mobile */
 @media (width <= 599px) {
@@ -782,7 +776,7 @@ main div.form-wrapper {
 
 /* Expand height for multi-select dropdowns (array types) */
 main .form form select[multiple] {
-    height: calc(42px + 50px);
+    height: calc(40px + 50px);
 }
 
 /* Language switcher for the edge-localization worker (tools/localize-worker/).

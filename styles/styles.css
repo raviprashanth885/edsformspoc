@@ -307,8 +307,8 @@ main .section.highlight {
 .brand-banner h1 {
   margin-top: 0.5em;
   text-transform: uppercase;
-  font-weight: 800;
-  font-size: 2.75rem;
+  font-weight: 700;
+  font-size: 2.5rem;
   line-height: 1.1;
   overflow-wrap: break-word;
 }
@@ -320,6 +320,14 @@ main .section.highlight {
   font-size: 1rem;
 }
 
+/* Fixed 22px, matching event.nfl.com's real Chiefs signup form exactly -
+   same "no breakpoint scaling" reasoning as h1 above, kept independent of
+   --body-font-size-m (which already happens to be 22px at narrow widths
+   but drops to 18px at >=900px - the real page doesn't do that). */
+.brand-banner-description {
+  font-size: 1.375rem;
+}
+
 /*
  * Any section containing a form gets a contrasting card automatically, no
  * per-brand CSS needed - it uses --card-background-color, which defaults to
@@ -328,27 +336,20 @@ main .section.highlight {
  * different card color against its own background.
  */
 
-/* Fixed-width card matching id.nfl.com's own sign-up form (measured
-   450px, 4px radius, that exact shadow). max-width alone isn't enough for
-   the narrow end of that responsiveness though - below ~498px viewport it
-   goes fully fluid and touches both screen edges with zero margin, unlike
-   id.nfl.com's own card, which measured a hard 24px inset from the screen
-   edge at 375px (x:24, width:327) even at its narrowest. width: calc(100%
-   - 48px) enforces that same 24px-per-side minimum at any width, while
-   max-width still caps it at 450px and margin: auto still centers it once
-   the viewport is wide enough for that cap to apply. */
+/* Matches event.nfl.com's real Chiefs signup form card exactly (measured:
+   620px content width via its innermost cmp-container, 20px padding, 12px
+   radius, white background, no box-shadow at all) - a single card layer,
+   not the two stacked ones this used to have (see the now-empty
+   main div.form-wrapper rule in form.css). width: calc(100% - 48px)
+   alongside max-width keeps a 24px-per-side minimum inset on narrow
+   viewports instead of touching the screen edge, same reasoning as
+   before, just re-measured against this new reference. */
 main .section:has(.form) {
-  max-width: 450px;
+  max-width: 620px;
   width: calc(100% - 48px);
   margin: 20px auto;
+  padding: 20px;
+  border-radius: 12px;
+  background-color: var(--card-background-color);
   color: var(--dark-color);
-
-  /* id.nfl.com's own card uses this exact shadow at 16% opacity, but their
-     busy dark photo background hides most of it - copying that same value
-     onto our flat, saturated brand colors (solid red/navy) makes it read
-     as a visible border/outline instead of the near-invisible soft lift it
-     is on their site. Lower opacity here reproduces their actual visual
-     result (a subtle card lift, not a border) rather than their literal
-     CSS number. */
-  box-shadow: 0 2px 10px rgb(0 0 0 / 6%);
 }
