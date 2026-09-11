@@ -182,6 +182,22 @@ function decorateBrandStyle() {
     const value = getMetadata(metaName);
     if (value) document.documentElement.style.setProperty(cssProperty, value);
   });
+
+  // Not in BRAND_STYLE_PROPERTIES above because, unlike a plain color/font
+  // value that can be set on the custom property as-is, background-image
+  // needs a url(...) wrapper - the raw metadata value is just a media path
+  // (same authoring convention as the Logo row), not valid CSS on its own.
+  const backgroundImage = getMetadata('background-image');
+  if (backgroundImage) {
+    // Resolved against the page's own URL, not left relative - a relative
+    // url() set via a custom property is resolved against the stylesheet
+    // that *uses* var(--background-image) (styles.css, at /styles/), not
+    // against the page or wherever the value was set from, so an
+    // as-authored "./media_xyz.jpg" path would otherwise 404 as
+    // /styles/media_xyz.jpg instead of the real page-relative location.
+    const absoluteUrl = new URL(backgroundImage, window.location.href).href;
+    document.documentElement.style.setProperty('--background-image', `url("${absoluteUrl}")`);
+  }
 }
 
 /**

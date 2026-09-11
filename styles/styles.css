@@ -75,6 +75,17 @@ body {
   display: none;
   margin: 0;
   background-color: var(--background-color);
+
+  /* --background-image defaults to none - a brand with no Background
+     Image metadata row is completely unaffected, same as every other
+     brand-metadata-driven property in this file. background-attachment:
+     fixed keeps it from scrolling with the (typically much taller) page
+     content, matching how a brand background image is normally used. */
+  background-image: var(--background-image, none);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
   color: var(--text-color);
   font-family: var(--body-font-family);
   font-size: var(--body-font-size-m);
